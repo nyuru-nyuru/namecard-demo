@@ -1,3 +1,4 @@
+import { appUrl } from '../urls.ts'
 import { emptyFlow, readFlow, type GameFlow } from './gameflow.ts'
 
 const FLOWCHART_PREFIX = 'namecard-game.flowchart.v1.'
@@ -59,10 +60,11 @@ export function saveFlowchart(flowchart: FlowchartDocument, storage: FlowchartSt
   }))
 }
 
-export function editorFlowchartUrl(id: string): string {
-  return `/editor?flowchart=${encodeURIComponent(id)}`
+export function editorFlowchartUrl(id?: string): string {
+  const query = id === undefined ? '' : `?flowchart=${encodeURIComponent(id)}`
+  return appUrl(`editor/${query}`)
 }
 
 export function playFlowchartUrl(id: string): string {
-  return `/?flowchart=${encodeURIComponent(id)}`
+  return appUrl(`?flowchart=${encodeURIComponent(id)}`)
 }

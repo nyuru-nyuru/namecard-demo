@@ -1,3 +1,4 @@
+import { appUrl } from '../urls.ts'
 import { parseGameFlow, type GameFlow } from './gameflow.ts'
 import { getFlowchart, type FlowchartStorage, type FlowchartSummary } from './flowcharts.ts'
 
@@ -12,7 +13,7 @@ export async function loadGameFlow(flowchartId?: string | null, storage?: Flowch
       flowchart: { id: flowchart.id, title: flowchart.title },
     }
   }
-  const response = await fetch('/gameflow.json')
+  const response = await fetch(appUrl('gameflow.json'))
   // Vite's SPA fallback returns index.html for an absent public file.
   const missing = response.status === 404 ||
     (response.ok && response.headers.get('content-type')?.includes('text/html'))
@@ -20,7 +21,7 @@ export async function loadGameFlow(flowchartId?: string | null, storage?: Flowch
     if (!response.ok) throw new Error(`Could not load gameflow.json: HTTP ${response.status}`)
     return { flow: parseGameFlow(await response.json()), source: 'gameflow.json' }
   }
-  const sample = await fetch('/sample_gameflow.json')
+  const sample = await fetch(appUrl('sample_gameflow.json'))
   if (!sample.ok) throw new Error(`Could not load sample_gameflow.json: HTTP ${sample.status}`)
   return { flow: parseGameFlow(await sample.json()), source: 'sample_gameflow.json (no gameflow.json found)' }
 }

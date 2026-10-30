@@ -158,7 +158,7 @@ function GameBoard({ flow, source, flowchart }: LoadedGameFlow) {
         <p>Rebuild eight-bit careers, one introduction at a time.</p>
         {flowchart && <p>Playing: <strong>{flowchart.title}</strong></p>}
         <div className="game-actions">
-          <a href={flowchart ? editorFlowchartUrl(flowchart.id) : '/editor'}>{flowchart ? 'Back to flowchart' : 'Game state editor'}</a>
+          <a href={editorFlowchartUrl(flowchart?.id)}>{flowchart ? 'Back to flowchart' : 'Game state editor'}</a>
           <button type="button" onClick={() => {
             if (window.confirm('Restart this game? All filing and discoveries will be reset.')) {
               setState(createGame(flow)); setSpread(0); setSelected(null); setInspecting(null)
@@ -321,7 +321,7 @@ export default function GameApp() {
             }
           }} />
         </label>
-        <a href={flowchartId === null ? '/editor' : editorFlowchartUrl(flowchartId)}>Create or edit a gameflow</a>
+        <a href={editorFlowchartUrl(flowchartId ?? undefined)}>Create or edit a gameflow</a>
       </footer>
     </main>
   )

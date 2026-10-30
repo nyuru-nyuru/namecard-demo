@@ -250,6 +250,20 @@ while [src/game/GameApp.tsx](src/game/GameApp.tsx) owns card selection and game 
 - `npm test`: run gameflow, saved-flowchart storage/playback, game rules, editor, grid-layout, and fixture tests using Node's built-in test runner
   and TypeScript stripping (Node 22.6+).
 
+### Deployment URLs
+
+Local development keeps the `/`, `/editor`, and `/demo` routes described above.
+Production builds use `/namecard-demo/` as their base, configured in
+[vite.config.ts](vite.config.ts). Run `npm run preview` and open
+[http://localhost:4173/namecard-demo/](http://localhost:4173/namecard-demo/)
+to check the production build. Navigation links, saved-flowchart play URLs,
+and public JSON requests all use Vite's `BASE_URL`.
+
+GitHub Pages does not provide an SPA routing fallback. During deployment, copy
+the built `dist/index.html` into `dist/editor/index.html` and
+`dist/demo/index.html` so direct visits and refreshes of `/namecard-demo/editor/`
+and `/namecard-demo/demo/` work. The deployment workflow is configured separately.
+
 ## Vite template notes
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.

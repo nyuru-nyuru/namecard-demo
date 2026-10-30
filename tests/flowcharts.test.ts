@@ -192,3 +192,13 @@ test('editor and play URLs preserve the flowchart ID rather than using its displ
     assert.ok(!url.href.includes('title'))
   }
 })
+
+test('editor links allow no flowchart ID and both URL helpers encode IDs without losing characters', () => {
+  assert.equal(editorFlowchartUrl(), '/editor/')
+  assert.equal(editorFlowchartUrl(''), '/editor/?flowchart=')
+  const id = 'saved flow/#?&='
+  assert.equal(editorFlowchartUrl(id), '/editor/?flowchart=saved%20flow%2F%23%3F%26%3D')
+  assert.equal(playFlowchartUrl(id), '/?flowchart=saved%20flow%2F%23%3F%26%3D')
+  assert.equal(new URL(editorFlowchartUrl(id), 'https://example.test').searchParams.get('flowchart'), id)
+  assert.equal(new URL(playFlowchartUrl(id), 'https://example.test').searchParams.get('flowchart'), id)
+})
