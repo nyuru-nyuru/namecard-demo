@@ -1,3 +1,45 @@
+.grid-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: end;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.grid-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.grid-controls input,
+.grid-controls select {
+  box-sizing: border-box;
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.grid-controls input {
+  width: 110px;
+}
+
+.grid-controls input:focus-visible,
+.grid-controls select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.grid-controls__error {
+  margin: 16px 24px 0;
+  color: var(--text-h);
+}
+
 .counter {
   font-size: 16px;
   padding: 5px 10px;

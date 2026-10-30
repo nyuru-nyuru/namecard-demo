@@ -1,0 +1,68 @@
+import { emptyFlow, readFlow, type GameFlow } from './gameflow.ts'
+
+const FLOWCHART_PREFIX = 'namecard-game.flowchart.v1.'
+const FLOWCHART_SUFFIX = '.gameflow.json'
+export const ACTIVE_FLOWCHART_KEY = 'namecard-game.active-flowchart.v1'
+
+export type FlowchartSummary = { id: string; title: string }
+export type FlowchartDocument = FlowchartSummary & { gameflow: GameFlow }
+export type FlowchartStorage = Pick<Storage, 'getItem' | 'setItem' | 'key' | 'length'>
+
+export function flowchartStorageKey(id: string): string {
+  if (!id.trim()) throw new Error('A flowchart ID is required.')
+  return `${FLOWCHART_PREFIX}${id}${FLOWCHART_SUFFIX}`
+}
+
+function displayTitle(title: string): string {
+  const trimmed = title.trim()
+  if (!trimmed) throw new Error('A flowchart title cannot be blank.')
+  return trimmed
+}
+
+export function createFlowchart(gameflow = emptyFlow(), title = 'Untitled flowchart'): FlowchartDocument {
+  return { id: crypto.randomUUID(), title: displayTitle(title), gameflow }
+}
+
+export function renameFlowchart(flowchart: FlowchartDocument, title: string): FlowchartDocument {
+  return { ...flowchart, title: displayTitle(title) }
+}
+
+export function getFlowchart(id: string, storage: FlowchartStorage = localStorage): FlowchartDocument {
+  const serialized = storage.getItem(flowchartStorageKey(id))
+  if (serialized === null) throw new Error(`Flowchart "${id}" was not found in this browser. Open the editor to choose a saved flowchart.`)
+  const value: unknown = JSON.parse(serialized)
+  if (value === null || typeof value !== 'object' ||
+    !('id' in value) || value.id !== id ||
+    !('title' in value) || typeof value.title !== 'string' ||
+    !('gameflow' in value)) {
+    throw new Error(`The saved flowchart "${id}" has an invalid document format.`)
+  }
+  return { id, title: displayTitle(value.title), gameflow: readFlow(value.gameflow) }
+}
+
+export function getFlowcharts(storage: FlowchartStorage = localStorage): FlowchartSummary[] {
+  const flowcharts: FlowchartSummary[] = []
+  for (let index = 0; index < storage.length; index++) {
+    const key = storage.key(index)
+    if (!key?.startsWith(FLOWCHART_PREFIX) || !key.endsWith(FLOWCHART_SUFFIX)) continue
+    const id = key.slice(FLOWCHART_PREFIX.length, -FLOWCHART_SUFFIX.length)
+    const flowchart = getFlowchart(id, storage)
+    flowcharts.push({ id: flowchart.id, title: flowchart.title })
+  }
+  return flowcharts.sort((a, b) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id))
+}
+
+export function saveFlowchart(flowchart: FlowchartDocument, storage: FlowchartStorage = localStorage): void {
+  storage.setItem(flowchartStorageKey(flowchart.id), JSON.stringify({
+    ...flowchart,
+    title: displayTitle(flowchart.title),
+  }))
+}
+
+export function editorFlowchartUrl(id: string): string {
+  return `/editor?flowchart=${encodeURIComponent(id)}`
+}
+
+export function playFlowchartUrl(id: string): string {
+  return `/?flowchart=${encodeURIComponent(id)}`
+}

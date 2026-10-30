@@ -1,0 +1,42 @@
+.flow-editor .fe-flowchart-tools { display: flex; flex-wrap: wrap; gap: 16px; margin: 18px 0; align-items: end; }
+.flow-editor .fe-flowchart-create { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.flow-editor .fe-flowchart-create label { min-width: 180px; font-size: 13px; }
+.flow-editor .fe-flowchart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 16px; align-items: start; }
+.flow-editor .fe-flowchart-canvas { position: relative; height: 70vh; min-height: 460px; max-height: 800px; border: 1px solid var(--fe-line); border-radius: 10px; overflow: hidden; background: #f9fbf5; }
+.flow-editor .fe-flowchart-empty { position: absolute; top: 45%; left: 10%; right: 10%; text-align: center; color: var(--fe-muted); pointer-events: none; }
+.flow-editor .fe-flowchart-sidebar { display: grid; gap: 12px; }
+.flow-editor .fe-flowchart-sidebar p { margin: 0; overflow-wrap: anywhere; font-size: 13px; }
+.flow-editor .fe-flowchart-relation { display: grid; gap: 12px; }
+.flow-editor .fe-flowchart-relation label { font-size: 13px; }
+.flow-editor .fe-flow-node { width: 230px; min-height: 130px; display: grid; gap: 5px; padding: 14px; border: 2px solid #8eaf9b; border-radius: 9px; background: #fffef9; box-shadow: 0 3px 10px #20302b14; font-size: 12px; overflow-wrap: anywhere; text-align: left; }
+.flow-editor .fe-flow-node > strong { font-size: 16px; line-height: 1.3; }
+.flow-editor .fe-flow-node__kind { text-transform: uppercase; letter-spacing: 1px; color: var(--fe-muted); font-weight: 700; font-size: 10px; }
+.flow-editor .fe-flow-node--telephone { background: #fff6e3; border-color: #b39356; }
+.flow-editor .fe-flow-node--unreachable { border-color: #c17a22; }
+.flow-editor .fe-flow-node--selected { outline: 3px solid #1b634b; outline-offset: 3px; }
+.flow-editor .fe-flow-node__badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.flow-editor .react-flow__handle { width: 12px; height: 12px; background: #1b634b; border: 2px solid #fff; }
+.flow-editor .fe-flow-edge .react-flow__edge-path { stroke: #1b634b; stroke-width: 2; }
+.flow-editor .fe-flow-edge--automatic .react-flow__edge-path { stroke: #9a763b; stroke-dasharray: 6 4; }
+.flow-editor .fe-flow-edge.selected .react-flow__edge-path { stroke-width: 4; }
+.flow-editor .react-flow__edge-text { font-size: 10px; }
+.flow-editor .react-flow__controls button { width: 32px; height: 32px; min-height: 32px; padding: 6px; border: 0; border-bottom: 1px solid var(--fe-line); border-radius: 0; }
+.flow-editor .react-flow__controls button svg { width: 16px; height: 16px; }
+.flow-editor .fe-reachability-warning { position: fixed; right: 16px; bottom: 16px; z-index: 20; width: min(360px, calc(100vw - 32px)); padding: 14px 16px; border: 1px solid #bc812c; border-radius: 9px; background: #fff3d4; color: #69420c; box-shadow: 0 5px 24px #20302b26; font-size: 13px; }
+.flow-editor .fe-reachability-warning__heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.flow-editor .fe-reachability-warning__dismiss { flex-shrink: 0; width: 28px; min-height: 28px; padding: 0; }
+.flow-editor .fe-reachability-warning p { margin: 6px 0; }
+.flow-editor .fe-reachability-warning summary { cursor: pointer; font-weight: 600; }
+.flow-editor .fe-reachability-warning ul { margin: 8px 0 0; padding-left: 20px; max-height: 150px; overflow: auto; overflow-wrap: anywhere; }
+
+@media (max-width: 1000px) {
+  .flow-editor .fe-flowchart-layout { grid-template-columns: minmax(0, 1fr); }
+  .flow-editor .fe-flowchart-sidebar { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 520px) {
+  .flow-editor .fe-flowchart-tools,
+  .flow-editor .fe-flowchart-create { display: grid; width: 100%; }
+  .flow-editor .fe-flowchart-create label { min-width: 0; }
+  .flow-editor .fe-flowchart-canvas { height: 65vh; min-height: 380px; }
+}

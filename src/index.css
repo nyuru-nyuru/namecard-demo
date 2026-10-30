@@ -1,4 +1,7 @@
 :root {
+  /* Namecard width:height ratio, matching the game's card bin cards (216 x 118). */
+  --card-aspect-ratio: 216 / 118;
+
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
