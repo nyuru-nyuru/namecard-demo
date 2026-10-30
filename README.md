@@ -259,10 +259,30 @@ Production builds use `/namecard-demo/` as their base, configured in
 to check the production build. Navigation links, saved-flowchart play URLs,
 and public JSON requests all use Vite's `BASE_URL`.
 
-GitHub Pages does not provide an SPA routing fallback. During deployment, copy
-the built `dist/index.html` into `dist/editor/index.html` and
-`dist/demo/index.html` so direct visits and refreshes of `/namecard-demo/editor/`
-and `/namecard-demo/demo/` work. The deployment workflow is configured separately.
+GitHub Pages does not provide an SPA routing fallback. The
+[deployment workflow](.github/workflows/deploy.yml) copies the built
+`dist/index.html` into `dist/editor/index.html` and `dist/demo/index.html` so
+direct visits and refreshes of `/namecard-demo/editor/` and
+`/namecard-demo/demo/` work.
+
+### Publishing to GitHub Pages
+
+1. In the GitHub repository, open **Settings > Pages** and set **Source** to
+   **GitHub Actions**.
+2. Commit all application and workflow files, including the
+   [URL helper](src/urls.ts), and push to `master`.
+3. Wait for **Deploy to GitHub Pages** in the repository's **Actions** tab to
+   finish. The site will be available at
+   [https://nyuru-nyuru.github.io/namecard-demo/](https://nyuru-nyuru.github.io/namecard-demo/).
+
+Every push to `master` rebuilds and deploys the site. You can also run the
+workflow manually from the Actions tab. Deployment uses GitHub's automatic
+`GITHUB_TOKEN`; no personal access token or deployment secret is required.
+
+Browser-local flowcharts are not uploaded by deployment. To publish a custom
+default game, export it from the editor, save it as `gameflow.json` in
+[public/](public/), and commit it before pushing. Otherwise, visitors play the
+included sample gameflow.
 
 ## Vite template notes
 
