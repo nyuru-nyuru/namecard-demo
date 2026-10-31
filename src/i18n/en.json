@@ -102,6 +102,7 @@
   "game.notice.blank": "This card has a blank back.",
   "game.errors.choosePocket": "Choose an unlocked pocket. The card has not been moved.",
   "game.errors.googleSheetsFallback": "Google Sheets could not be loaded or used. Using the local gameflow instead. {error}",
+  "game.errors.spreadsheetCache": "The spreadsheet loaded, but its tab cache could not be read or saved: {error}",
   "inspection.close": "Close card inspection",
   "inspection.blankBack": "The back of this card is blank.",
   "inspection.showFront": "Show front",

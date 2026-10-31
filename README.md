@@ -154,15 +154,22 @@ start in the bin without starting-card selections or authored unlock conditions.
 Only the automatic ownership-to-telephone links are generated.
 Blank CSV roles remain blank and are optional, so this sample can be played
 and exported without filling them in.
-Meisi is the editor's default sample selection and the game's startup fallback
-when `gameflow.json` is absent. Custom public files and saved flowcharts keep
-their existing priority and data.
+When the configured Google Sheet loads successfully, it is selected in the
+sample dropdown and initializes a fresh editor, matching the game's default
+dataset. Existing saved flowcharts and migrated drafts still restore normally.
+Without a usable sheet, Meisi remains the default sample selection and the
+game's startup fallback when `gameflow.json` is absent. Custom public files and
+saved flowcharts keep their existing priority and data.
 
-Successfully loaded Google Sheets are added first in the current page's sample
-dataset list. Selecting one reuses its cached data without another API request.
-Loading the same spreadsheet and range again refreshes its entry without
-duplicates. These entries live only in memory, are cleared on page reload, and
-are not written to JSON files or browser storage.
+The first successful Google Sheets load is cached in the tab's `sessionStorage`,
+keyed by spreadsheet ID and range, without storing API credentials or generating
+a JSON file. The game and editor reuse that result across navigation and page
+reloads rather than fetching it again. The editor adds it first in the sample
+dataset list, including when restoring a saved flowchart, without replacing or
+saving the open flowchart. Selecting it and clicking **Load sample** applies the
+cached data. Clear the tab's session cache and reload to fetch updated data.
+Cache failures show a warning but do not prevent a successfully fetched sheet
+from being used.
 
 The Meisi dataset is generated from [meisi-data.csv](meisi-data.csv) with
 `npm run generate:meisi`. The generator and live Sheets loading share the

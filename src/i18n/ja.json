@@ -102,6 +102,7 @@
   "game.notice.blank": "この名刺の裏面には何も書かれていません。",
   "game.errors.choosePocket": "固定されていないポケットを選んでください。名刺は移動していません。",
   "game.errors.googleSheetsFallback": "Google スプレッドシートを読み込めないか、ゲームに使用できませんでした。代わりにローカルのゲームデータを使用しています。{error}",
+  "game.errors.spreadsheetCache": "スプレッドシートは読み込まれましたが、タブ内のキャッシュを読み書きできませんでした：{error}",
   "inspection.close": "名刺の詳細を閉じる",
   "inspection.blankBack": "この名刺の裏面には何も書かれていません。",
   "inspection.showFront": "表面を表示",

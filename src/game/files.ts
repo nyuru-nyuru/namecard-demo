@@ -19,6 +19,8 @@ type SampleDataset = {
   titleValues?: Message['values']
 } & ({ filename: string } | { loaded: LoadedGameFlow })
 
+type SpreadsheetCacheStorage = Pick<Storage, 'getItem' | 'setItem'>
+
 export const DEFAULT_SAMPLE_DATASET = {
   id: 'meisi', titleKey: 'samples.meisi', filename: 'sample_meisi_gameflow.json',
 } as const
@@ -46,6 +48,62 @@ export function loadFromSpreadsheet(options: GoogleSheetCsvOptions): Promise<str
   return getGoogleSheetCsv(options)
 }
 
+export function getConfiguredSpreadsheetOptions(signal?: AbortSignal): GoogleSheetCsvOptions | undefined {
+  const spreadsheet = {
+    spreadsheetId: import.meta.env?.VITE_SPREADSHEET_ID,
+    range: import.meta.env?.VITE_SPREADSHEET_NAME,
+    apiKey: import.meta.env?.VITE_GOOGLE_SHEETS_API_KEY,
+    signal,
+  }
+  const hasSettings = [spreadsheet.spreadsheetId, spreadsheet.range, spreadsheet.apiKey]
+    .some((value) => value !== undefined)
+  return hasSettings ? spreadsheet : undefined
+}
+
+export async function loadSpreadsheetGameFlow(
+  spreadsheet: GoogleSheetCsvOptions,
+  storage?: SpreadsheetCacheStorage,
+): Promise<LoadedGameFlow> {
+  spreadsheet.signal?.throwIfAborted()
+  const id = `google-sheets:${JSON.stringify([spreadsheet.spreadsheetId?.trim(), spreadsheet.range?.trim()])}`
+  const existing = sampleDatasets.find((sample) => sample.id === id)
+  let flow = existing && 'loaded' in existing ? readFlow(existing.loaded.flow) : undefined
+  let warning = existing && 'loaded' in existing ? existing.loaded.warning : undefined
+  let cache = storage
+  const cacheKey = `namecard-game.spreadsheet.v1.${id}`
+  if (!flow) {
+    try {
+      cache ??= typeof window === 'undefined' ? undefined : window.sessionStorage
+      const cached = cache?.getItem(cacheKey)
+      if (cached !== undefined && cached !== null) flow = parseGameFlow(JSON.parse(cached))
+    } catch (error) {
+      warning = msg('game.errors.spreadsheetCache', { error: errorMessage(error) })
+    }
+  }
+  if (!flow) {
+    flow = parseGameFlow(parseMeisiCsv(await loadFromSpreadsheet(spreadsheet)))
+    spreadsheet.signal?.throwIfAborted()
+    try {
+      cache?.setItem(cacheKey, JSON.stringify(flow))
+    } catch (error) {
+      warning = msg('game.errors.spreadsheetCache', { error: errorMessage(error) })
+    }
+  }
+  spreadsheet.signal?.throwIfAborted()
+  const sourceMessage = msg('game.source.googleSheets', { range: spreadsheet.range })
+  const loaded = { flow, source: english(sourceMessage.key, sourceMessage.values), sourceMessage, ...(warning ? { warning } : {}) }
+  const dataset: SampleDataset = {
+    id,
+    titleKey: sourceMessage.key,
+    titleValues: sourceMessage.values,
+    loaded: { ...loaded, flow: readFlow(flow) },
+  }
+  const existingIndex = sampleDatasets.findIndex((sample) => sample.id === dataset.id)
+  if (existingIndex !== -1) sampleDatasets.splice(existingIndex, 1)
+  sampleDatasets.unshift(dataset)
+  return loaded
+}
+
 export async function loadGameFlow(
   flowchartId?: string | null,
   storage?: FlowchartStorage,
@@ -61,22 +119,8 @@ export async function loadGameFlow(
     }
   }
   if (!spreadsheet) return loadLocalGameFlow()
-  spreadsheet.signal?.throwIfAborted()
   try {
-    const flow = parseGameFlow(parseMeisiCsv(await loadFromSpreadsheet(spreadsheet)))
-    spreadsheet.signal?.throwIfAborted()
-    const sourceMessage = msg('game.source.googleSheets', { range: spreadsheet.range })
-    const loaded = { flow, source: english(sourceMessage.key, sourceMessage.values), sourceMessage }
-    const dataset: SampleDataset = {
-      id: `google-sheets:${JSON.stringify([spreadsheet.spreadsheetId.trim(), spreadsheet.range.trim()])}`,
-      titleKey: sourceMessage.key,
-      titleValues: sourceMessage.values,
-      loaded: { ...loaded, flow: readFlow(flow) },
-    }
-    const existingIndex = sampleDatasets.findIndex((sample) => sample.id === dataset.id)
-    if (existingIndex !== -1) sampleDatasets.splice(existingIndex, 1)
-    sampleDatasets.unshift(dataset)
-    return loaded
+    return await loadSpreadsheetGameFlow(spreadsheet)
   } catch (sheetError) {
     if (spreadsheet.signal?.aborted) throw sheetError
     try {

@@ -8,7 +8,7 @@ import CardInspection from '../components/CardInspection'
 import { useI18n } from '../i18n/context.ts'
 import { dragAccessibility } from '../i18n/dragAccessibility.ts'
 import { errorMessage, msg, type LocalizedText, type Message } from '../i18n/messages.ts'
-import { loadGameFlow, type LoadedGameFlow } from './files'
+import { getConfiguredSpreadsheetOptions, loadGameFlow, type LoadedGameFlow } from './files'
 import { editorFlowchartUrl } from './flowcharts'
 import { parseGameFlow, type GameCard } from './gameflow'
 import { callPerson, cardLocation, createGame, isComplete, moveCard, viewBack, type Destination, type GameState } from './state'
@@ -352,15 +352,8 @@ export default function GameApp() {
   useEffect(() => {
     let cancelled = false
     const controller = new AbortController()
-    const spreadsheet = {
-      spreadsheetId: import.meta.env.VITE_SPREADSHEET_ID,
-      range: import.meta.env.VITE_SPREADSHEET_NAME,
-      apiKey: import.meta.env.VITE_GOOGLE_SHEETS_API_KEY,
-      signal: controller.signal,
-    }
-    const hasSpreadsheetSettings = [spreadsheet.spreadsheetId, spreadsheet.range, spreadsheet.apiKey]
-      .some((value) => value !== undefined)
-    void loadGameFlow(flowchartId, undefined, hasSpreadsheetSettings ? spreadsheet : undefined).then((result) => {
+    const spreadsheet = getConfiguredSpreadsheetOptions(controller.signal)
+    void loadGameFlow(flowchartId, undefined, spreadsheet).then((result) => {
       if (!cancelled) {
         setLoaded(result)
         setError(result.warning ?? '')

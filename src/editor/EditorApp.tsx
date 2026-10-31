@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useI18n } from '../i18n/context.ts'
 import { errorMessage as message, LocalizedError, msg, type LocalizedText } from '../i18n/messages.ts'
-import { DEFAULT_SAMPLE_DATASET, downloadFlow, loadGameFlow, loadSampleDataset, SAMPLE_DATASETS } from '../game/files.ts'
+import {
+  DEFAULT_SAMPLE_DATASET,
+  SAMPLE_DATASETS,
+  downloadFlow,
+  getConfiguredSpreadsheetOptions,
+  loadGameFlow,
+  loadSampleDataset,
+  loadSpreadsheetGameFlow,
+} from '../game/files.ts'
 import {
   ACTIVE_FLOWCHART_KEY,
   createFlowchart,
@@ -332,12 +340,14 @@ export default function EditorApp() {
   const [titleDraft, setTitleDraft] = useState('')
   const [view, setView] = useState<'people' | 'events' | 'flowchart'>('flowchart')
   const [sampleDataset, setSampleDataset] = useState<string>(DEFAULT_SAMPLE_DATASET.id)
+  const [sampleDatasets, setSampleDatasets] = useState(() => [...SAMPLE_DATASETS])
   const [revision, setRevision] = useState(0)
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [busy, setBusy] = useState(true)
   const [loadError, setLoadError] = useState<LocalizedText>('')
   const [storageError, setStorageError] = useState<LocalizedText>('')
   const [actionError, setActionError] = useState<LocalizedText>('')
+  const [sampleError, setSampleError] = useState<LocalizedText>('')
   const [notice, setNotice] = useState<LocalizedText>('')
   const [saved, setSaved] = useState<string | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
@@ -367,6 +377,19 @@ export default function EditorApp() {
 
   useEffect(() => {
     let active = true
+    const controller = new AbortController()
+    const spreadsheet = getConfiguredSpreadsheetOptions(controller.signal)
+    const spreadsheetLoad = spreadsheet ? loadSpreadsheetGameFlow(spreadsheet).then((loaded) => {
+      if (active) {
+        setSampleDatasets([...SAMPLE_DATASETS])
+        setSampleDataset((current) => current === DEFAULT_SAMPLE_DATASET.id ? SAMPLE_DATASETS[0].id : current)
+        setSampleError(loaded.warning ?? '')
+      }
+      return loaded
+    }).catch((error: unknown) => {
+      if (active) setSampleError(msg('editor.errors.sample', { error: message(error) }))
+      return undefined
+    }) : undefined
     async function initialize() {
       try {
         const existing = getFlowcharts()
@@ -395,7 +418,9 @@ export default function EditorApp() {
         return
       }
       try {
-        const loaded = await loadGameFlow()
+        const spreadsheetFlow = await spreadsheetLoad
+        if (!active) return
+        const loaded = spreadsheetFlow ?? await loadGameFlow()
         if (active) {
           const initialFlow = readEditorDraft(loaded.flow)
           commit(createFlowchart(
@@ -409,7 +434,10 @@ export default function EditorApp() {
       }
     }
     void initialize().finally(() => { if (active) setBusy(false) })
-    return () => { active = false }
+    return () => {
+      active = false
+      controller.abort()
+    }
   }, [commit])
 
   const serialized = flowchart ? JSON.stringify(flowchart) : null
@@ -588,7 +616,7 @@ export default function EditorApp() {
           }}>{t('editor.loadPublic')}</button>
           <label>{t('editor.sampleDataset')}
             <select value={sampleDataset} disabled={busy} onChange={(event) => setSampleDataset(event.target.value)}>
-              {SAMPLE_DATASETS.map((dataset) => <option key={dataset.id} value={dataset.id}>{t(dataset.titleKey, dataset.titleValues)}</option>)}
+              {sampleDatasets.map((dataset) => <option key={dataset.id} value={dataset.id}>{t(dataset.titleKey, dataset.titleValues)}</option>)}
             </select>
           </label>
           <button type="button" disabled={busy} onClick={async () => {
@@ -623,6 +651,7 @@ export default function EditorApp() {
           }}>{t('editor.retrySave')}</button>
         </div>}
         {actionError && <div className="fe-alert" role="alert">{format(actionError)}</div>}
+        {sampleError && <div className="fe-alert" role="alert">{format(sampleError)}</div>}
         {flow && <>
           <section className={`fe-validation ${errors.length ? 'fe-validation--invalid' : ''}`} aria-label={t('editor.validationLabel')} aria-live="polite">
             <details open={errors.length > 0}>

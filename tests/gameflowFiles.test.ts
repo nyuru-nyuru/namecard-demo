@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { DEFAULT_SAMPLE_DATASET, loadGameFlow, loadSampleDataset, SAMPLE_DATASETS } from '../src/game/files.ts'
+import { DEFAULT_SAMPLE_DATASET, loadGameFlow, loadSampleDataset, loadSpreadsheetGameFlow, SAMPLE_DATASETS } from '../src/game/files.ts'
 import { errorMessage, formatText, LocalizedError } from '../src/i18n/messages.ts'
 import { createGame, isComplete, moveCard } from '../src/game/state.ts'
 
@@ -57,10 +57,10 @@ test('a successful live sheet is the top default and becomes a playable all-unlo
   assert.deepEqual(state.called, [])
 })
 
-test('successful Sheets loads prepend a memory-only sample that can be reloaded without fetching', async (context) => {
+test('standalone spreadsheet loading prepends a reusable sample that can be reloaded without fetching', async (context) => {
   const previousDatasets = [...SAMPLE_DATASETS]
   const fetch = context.mock.method(globalThis, 'fetch', async () => sheetResponse())
-  const result = await loadGameFlow(undefined, undefined, { ...spreadsheet, spreadsheetId: 'cached-sheet' })
+  const result = await loadSpreadsheetGameFlow({ ...spreadsheet, spreadsheetId: 'cached-sheet' })
   const dataset = SAMPLE_DATASETS[0]
   assert.ok('loaded' in dataset)
   assert.equal('filename' in dataset, false)
@@ -79,26 +79,148 @@ test('successful Sheets loads prepend a memory-only sample that can be reloaded 
   assert.equal(fetch.mock.callCount(), 1)
 })
 
-test('refreshing a spreadsheet sample replaces its cached data and moves it first without duplicates', async (context) => {
+test('reloading a spreadsheet reuses its first fetch and moves it first without duplicates', async (context) => {
   const previousDatasets = [...SAMPLE_DATASETS]
   let values = sheetValues
   const fetch = context.mock.method(globalThis, 'fetch', async () => sheetResponse(values))
   const options = { ...spreadsheet, spreadsheetId: 'refresh-sheet' }
-  await loadGameFlow(undefined, undefined, options)
+  const first = await loadGameFlow(undefined, undefined, options)
   const firstDataset = SAMPLE_DATASETS[0]
   await loadGameFlow(undefined, undefined, { ...options, range: 'Other!A1:M3' })
   const otherDataset = SAMPLE_DATASETS[0]
   assert.notEqual(firstDataset.id, otherDataset.id)
   values = [sheetHeader, [0, 2026, '', 42, 'Updated Ada', '', '', 'Updated Studio', '', '', '', '', '']]
-  const refreshed = await loadGameFlow(undefined, undefined, options)
+  const cached = await loadGameFlow(undefined, undefined, options)
   assert.equal(SAMPLE_DATASETS.length, previousDatasets.length + 2)
   assert.equal(SAMPLE_DATASETS[0].id, firstDataset.id)
   assert.strictEqual(SAMPLE_DATASETS[1], otherDataset)
   assert.deepEqual(SAMPLE_DATASETS.slice(2), previousDatasets)
-  assert.deepEqual(await loadSampleDataset(firstDataset.id), refreshed)
-  assert.equal((await loadSampleDataset(firstDataset.id)).flow.namecards[0].company, 'Updated Studio')
+  assert.deepEqual(cached, first)
+  assert.notStrictEqual(cached.flow, first.flow)
+  assert.deepEqual(await loadSampleDataset(firstDataset.id), cached)
+  assert.equal((await loadSampleDataset(firstDataset.id)).flow.namecards[0].company, 'Live Studio')
   assert.equal((await loadSampleDataset(otherDataset.id)).flow.namecards[0].company, 'Live Studio')
-  assert.equal(fetch.mock.callCount(), 3)
+  assert.equal(fetch.mock.callCount(), 2)
+})
+
+test('the first successful spreadsheet fetch is saved once in the tab cache without credentials', async (context) => {
+  const storage = {
+    getItem: context.mock.fn((_key: string) => null),
+    setItem: context.mock.fn((_key: string, _value: string) => undefined),
+  }
+  const fetch = context.mock.method(globalThis, 'fetch', async () => sheetResponse())
+  const options = { ...spreadsheet, spreadsheetId: 'session-write-sheet' }
+  const first = await loadSpreadsheetGameFlow(options, storage)
+  const cached = await loadSpreadsheetGameFlow(options, storage)
+  assert.deepEqual(cached, first)
+  assert.notStrictEqual(cached.flow, first.flow)
+  assert.equal(fetch.mock.callCount(), 1)
+  assert.equal(storage.getItem.mock.callCount(), 1)
+  assert.equal(storage.setItem.mock.callCount(), 1)
+  const [key, value] = storage.setItem.mock.calls[0].arguments
+  assert.equal(key, `namecard-game.spreadsheet.v1.google-sheets:${JSON.stringify([options.spreadsheetId, options.range])}`)
+  assert.deepEqual(JSON.parse(value), first.flow)
+  assert.ok(!key.includes(options.apiKey))
+  assert.ok(!value.includes(options.apiKey))
+})
+
+test('a spreadsheet restored from the tab cache is first in the sample list without an API request', async (context) => {
+  const previousDatasets = [...SAMPLE_DATASETS]
+  const storage = {
+    getItem: context.mock.fn((_key: string) => meisiSample),
+    setItem: context.mock.fn((_key: string, _value: string) => undefined),
+  }
+  const fetch = context.mock.method(globalThis, 'fetch', async () => { throw new Error('Unexpected API request') })
+  const options = { ...spreadsheet, spreadsheetId: 'session-read-sheet' }
+  const result = await loadSpreadsheetGameFlow(options, storage)
+  assert.equal(result.flow.namecards.length, 53)
+  assert.equal(result.warning, undefined)
+  assert.deepEqual(await loadSampleDataset(SAMPLE_DATASETS[0].id), result)
+  assert.deepEqual(SAMPLE_DATASETS.slice(1), previousDatasets)
+  assert.equal(storage.getItem.mock.callCount(), 1)
+  assert.equal(storage.setItem.mock.callCount(), 0)
+  assert.equal(fetch.mock.callCount(), 0)
+})
+
+test('corrupt tab caches are replaced by a fresh spreadsheet and reported visibly', async (context) => {
+  for (const [spreadsheetId, value] of [
+    ['invalid-json-cache', '{not json'],
+    ['invalid-flow-cache', '{"version":2}'],
+  ] as const) {
+    const storage = {
+      getItem: context.mock.fn((_key: string) => value),
+      setItem: context.mock.fn((_key: string, _value: string) => undefined),
+    }
+    const fetch = context.mock.method(globalThis, 'fetch', async () => sheetResponse())
+    const result = await loadSpreadsheetGameFlow({ ...spreadsheet, spreadsheetId }, storage)
+    assert.equal(result.flow.namecards.length, 2)
+    assert.equal(result.warning?.key, 'game.errors.spreadsheetCache')
+    assert.equal(fetch.mock.callCount(), 1)
+    assert.equal(storage.setItem.mock.callCount(), 1)
+    assert.deepEqual(JSON.parse(storage.setItem.mock.calls[0].arguments[1]), result.flow)
+    fetch.mock.restore()
+  }
+})
+
+test('tab cache read or write failures do not replace a successful spreadsheet with local data', async (context) => {
+  for (const operation of ['getItem', 'setItem'] as const) {
+    const failure = new DOMException('Tab cache unavailable', 'SecurityError')
+    const storage = {
+      getItem(_key: string) {
+        if (operation === 'getItem') throw failure
+        return null
+      },
+      setItem(_key: string, _value: string) {
+        if (operation === 'setItem') throw failure
+      },
+    }
+    const fetch = context.mock.method(globalThis, 'fetch', async () => sheetResponse())
+    const options = { ...spreadsheet, spreadsheetId: `cache-${operation}-failure` }
+    const result = await loadSpreadsheetGameFlow(options, storage)
+    assert.equal(result.flow.namecards.length, 2)
+    assert.equal(result.sourceMessage?.key, 'game.source.googleSheets')
+    assert.equal(result.warning?.key, 'game.errors.spreadsheetCache')
+    assert.deepEqual(await loadGameFlow(undefined, undefined, options), result)
+    assert.equal(fetch.mock.callCount(), 1)
+    fetch.mock.restore()
+  }
+})
+
+test('standalone spreadsheet failures leave samples unchanged without requesting a local fallback', async (context) => {
+  const previousDatasets = [...SAMPLE_DATASETS]
+  for (const [response, expected] of [
+    [new Response('Unavailable', { status: 503 }), /503/],
+    [sheetResponse([['wrong header']]), /header/],
+  ] as const) {
+    const fetch = context.mock.method(globalThis, 'fetch', async (url: unknown) => {
+      assert.ok(url instanceof URL)
+      assert.equal(url.hostname, 'sheets.googleapis.com')
+      return response
+    })
+    await assert.rejects(loadSpreadsheetGameFlow({ ...spreadsheet, spreadsheetId: 'failed-editor-sheet' }), expected)
+    assert.equal(fetch.mock.callCount(), 1)
+    assert.deepEqual(SAMPLE_DATASETS, previousDatasets)
+    fetch.mock.restore()
+  }
+})
+
+test('a spreadsheet response arriving after cancellation is not registered as a sample', async (context) => {
+  const previousDatasets = [...SAMPLE_DATASETS]
+  const controller = new AbortController()
+  const failure = new DOMException('Cancelled', 'AbortError')
+  const fetch = context.mock.method(globalThis, 'fetch', async () => {
+    controller.abort(failure)
+    return sheetResponse()
+  })
+  const options = { ...spreadsheet, spreadsheetId: 'cancelled-response-sheet', signal: controller.signal }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await assert.rejects(loadSpreadsheetGameFlow(options), (error: unknown) => {
+      assert.strictEqual(error, failure)
+      return true
+    })
+  }
+  assert.equal(fetch.mock.callCount(), 1)
+  assert.deepEqual(SAMPLE_DATASETS, previousDatasets)
 })
 
 test('Sheets HTTP or network failures use the configured local flow with a visible warning', async (context) => {
@@ -113,7 +235,7 @@ test('Sheets HTTP or network failures use the configured local flow with a visib
       }
       return new Response(sample)
     })
-    const result = await loadGameFlow(undefined, undefined, spreadsheet)
+    const result = await loadGameFlow(undefined, undefined, { ...spreadsheet, spreadsheetId: 'failed-game-sheet' })
     assert.equal(result.source, 'gameflow.json')
     assert.equal(result.flow.namecards.length, 40)
     assert.equal(result.flow.mode, undefined)
@@ -140,7 +262,7 @@ test('invalid or unplayable Sheets CSV uses the bundled fallback and reports the
       if (url instanceof URL) return sheetResponse(values)
       return url === '/gameflow.json' ? new Response('', { status: 404 }) : new Response(meisiSample)
     })
-    const result = await loadGameFlow(undefined, undefined, { ...spreadsheet, signal: controller.signal })
+    const result = await loadGameFlow(undefined, undefined, { ...spreadsheet, spreadsheetId: 'invalid-sheet', signal: controller.signal })
     assert.equal(result.sourceMessage?.key, 'game.source.sample')
     assert.equal(result.flow.namecards.length, 53)
     assert.equal(result.flow.mode, 'all-unlocked')
@@ -161,12 +283,12 @@ test('cancelled Sheets loads do not start a local fallback', async (context) => 
     controller.abort(failure)
     throw failure
   })
-  await assert.rejects(loadGameFlow(undefined, undefined, { ...spreadsheet, signal: controller.signal }), (error: unknown) => {
+  await assert.rejects(loadGameFlow(undefined, undefined, { ...spreadsheet, spreadsheetId: 'cancelled-sheet', signal: controller.signal }), (error: unknown) => {
     assert.strictEqual(error, failure)
     return true
   })
   assert.equal(fetch.mock.callCount(), 1)
-  await assert.rejects(loadGameFlow(undefined, undefined, { ...spreadsheet, signal: controller.signal }), (error: unknown) => {
+  await assert.rejects(loadGameFlow(undefined, undefined, { ...spreadsheet, spreadsheetId: 'cancelled-sheet', signal: controller.signal }), (error: unknown) => {
     assert.strictEqual(error, failure)
     return true
   })
@@ -178,7 +300,7 @@ test('failures of both Sheets and local loading are reported together', async (c
   const fetch = context.mock.method(globalThis, 'fetch', async (url: unknown) =>
     new Response('Unavailable', { status: url instanceof URL ? 503 : 500 }),
   )
-  await assert.rejects(loadGameFlow(undefined, undefined, spreadsheet), (error: unknown) => {
+  await assert.rejects(loadGameFlow(undefined, undefined, { ...spreadsheet, spreadsheetId: 'unavailable-sheet' }), (error: unknown) => {
     assert.ok(error instanceof LocalizedError)
     assert.equal(error.localizedMessage.key, 'errors.googleSheetsAndLocalFailed')
     for (const locale of ['en', 'ja'] as const) {
