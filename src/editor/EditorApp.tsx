@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { downloadFlow, loadGameFlow } from '../game/files.ts'
+import { useI18n } from '../i18n/context.ts'
+import { errorMessage as message, LocalizedError, msg, type LocalizedText } from '../i18n/messages.ts'
+import { DEFAULT_SAMPLE_DATASET, downloadFlow, loadGameFlow, loadSampleDataset, SAMPLE_DATASETS } from '../game/files.ts'
 import {
   ACTIVE_FLOWCHART_KEY,
   createFlowchart,
@@ -13,8 +15,10 @@ import {
   type FlowchartSummary,
 } from '../game/flowcharts.ts'
 import {
+  flowValidationIssues,
   incomingConditions,
   isAutomaticRelation,
+  startingCardIds,
   synchronizeFlow,
   unreachableEventIds,
   validateFlow,
@@ -39,196 +43,258 @@ import './editor.css'
 
 type ChangeFlow = (operation: (flow: GameFlow) => GameFlow) => void
 
-function message(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
 function Arrow({ automatic = false }: { automatic?: boolean }) {
   return <svg className={automatic ? 'fe-arrow fe-arrow--auto' : 'fe-arrow'} viewBox="0 0 64 18" aria-hidden="true">
     <path d="M1 9 H58 M49 2 L58 9 L49 16" fill="none" stroke="currentColor" strokeWidth="2" />
   </svg>
 }
 
-function CardEditor({ card, flow, change }: { card: GameCard; flow: GameFlow; change: ChangeFlow }) {
-  const patch = (value: Parameters<typeof updateCard>[2]) => change((current) => updateCard(current, card.id, value))
+function CardEditor({ card, flow, change, invalid, onOwnerChange }: {
+  card: GameCard; flow: GameFlow; change: ChangeFlow; invalid: boolean; onOwnerChange: (personId: number | null) => void
+}) {
+  const { t } = useI18n()
+  const patch = (value: Parameters<typeof updateCard>[2]) => change((current) => {
+    const updated = updateCard(current, card.id, value)
+    if (value.personId !== undefined) onOwnerChange(value.personId)
+    return updated
+  })
   const ownerExists = card.personId === null || flow.persons.some((person) => person.id === card.personId)
-  return <section className="fe-panel fe-card-editor" aria-labelledby="card-editor-title">
+  const allUnlocked = flow.mode === 'all-unlocked'
+  return <section className={`fe-panel fe-card-editor${invalid ? ' fe-invalid-card' : ''}`} aria-labelledby="card-editor-title">
     <div className="fe-section-heading">
-      <h2 id="card-editor-title">Edit card #{card.id}</h2>
-      <span className="fe-badge">ID is permanent</span>
+      <h2 id="card-editor-title">{t('editor.editCardTitle', { id: card.id })}</h2>
+      <span className="fe-badge">{t('editor.permanentIdBadge', { objectId: card.objectId })}</span>
+      {invalid && <span className="fe-badge fe-badge--error">{t('common.validationError')}</span>}
     </div>
-    <label>Owner
+    <label>{t('editor.owner')}
       <select value={card.personId ?? ''} onChange={(event) => patch({ personId: event.target.value === '' ? null : Number(event.target.value) })}>
-        <option value="">Unassigned draft</option>
-        {!ownerExists && <option value={card.personId!}>Missing person #{card.personId}</option>}
+        <option value="">{t('editor.unassignedDraft')}</option>
+        {!ownerExists && <option value={card.personId!}>{t('common.missingPersonId', { id: card.personId! })}</option>}
         {flow.persons.map((person) => <option key={person.id} value={person.id}
           disabled={person.id !== card.personId && person.namecards.length >= 8}>
-          #{person.id} · {person.name || 'Unnamed person'} ({person.namecards.length}/8)
+          #{person.id} · {person.name || t('common.unnamedPerson')} ({person.namecards.length}/8)
         </option>)}
       </select>
     </label>
-    <p className="fe-help">Ownership updates the answer key and telephone links. Display name is independent.</p>
-    <label>Display name<input value={card.personDisplayName} onChange={(event) => patch({ personDisplayName: event.target.value })} /></label>
-    <label>Company<input value={card.company} onChange={(event) => patch({ company: event.target.value })} /></label>
-    <label>Role<input value={card.role} onChange={(event) => patch({ role: event.target.value })} /></label>
-    <label>Year<input type="number" min="1" max="9999" step="1" value={card.year || ''}
+    <p className="fe-help">{t('editor.ownerHelp')}</p>
+    <label>{t('editor.displayName')}<input value={card.personDisplayName} onChange={(event) => patch({ personDisplayName: event.target.value })} /></label>
+    <label>{t('editor.company')}<input value={card.company} onChange={(event) => patch({ company: event.target.value })} /></label>
+    <label>{t('editor.department')}<input value={card.department ?? ''} onChange={(event) => patch({ department: event.target.value })} /></label>
+    <label>{t('editor.logo')}<input value={card.logo ?? ''} onChange={(event) => patch({ logo: event.target.value })} /></label>
+    <label>{t('editor.role')}<input value={card.role} onChange={(event) => patch({ role: event.target.value })} /></label>
+    <label>{t('editor.year')}<input type="number" min="1" max="9999" step="1" value={card.year || ''}
       onChange={(event) => patch({ year: Number(event.target.value) })} /></label>
-    <label>Back text<textarea rows={4} value={card.backText} onChange={(event) => patch({ backText: event.target.value })} /></label>
-    <p className="fe-help">Reading nonblank back text satisfies this card’s outgoing card conditions. Telephone calls are separate.</p>
+    <label>{t('editor.misc')}<textarea rows={5} value={card.misc} onChange={(event) => patch({ misc: event.target.value })} /></label>
+    <p className="fe-help">{t('editor.miscHelp')}</p>
+    <label>{t('editor.backText')}<textarea rows={4} value={card.backText} onChange={(event) => patch({ backText: event.target.value })} /></label>
+    <p className="fe-help">{t(allUnlocked ? 'editor.allUnlockedBackHelp' : 'editor.backTextHelp')}</p>
     <label className="fe-check">
-      <input type="checkbox" checked={flow.startingCards.includes(card.id)}
+      <input type="checkbox" checked={startingCardIds(flow).includes(card.id)} disabled={allUnlocked}
         onChange={(event) => change((current) => setStartingCard(current, card.id, event.target.checked))} />
-      Available in the starting bin
+      {t('editor.startingBin')}
     </label>
     <button className="fe-danger" type="button" onClick={() => {
       const lastCard = card.personId !== null && flow.namecards.filter((item) => item.personId === card.personId).length === 1
-      if (window.confirm(`Permanently delete card #${card.id} and all its incoming/outgoing relations?${lastCard ? " This is the person's last card, so their telephone event and its relations will also be removed. The empty person will be kept." : ''}`)) {
+      if (window.confirm(t('editor.confirmDeleteCard', {
+        id: card.id, lastCardWarning: lastCard ? t('editor.lastCardWarning') : '',
+      }))) {
         change((current) => removeCard(current, card.id))
       }
-    }}>Delete card #{card.id}</button>
+    }}>{t('editor.deleteCard', { id: card.id })}</button>
   </section>
 }
 
-function PersonView({ flow, change, selectedCard, selectCard }: {
+function PersonView({ flow, change, selectedCard, selectCard, invalidCardIds }: {
   flow: GameFlow; change: ChangeFlow; selectedCard: number | null; selectCard: (id: number) => void
+  invalidCardIds: ReadonlySet<number>
 }) {
+  const { t } = useI18n()
+  const starting = new Set(startingCardIds(flow))
   const selected = flow.namecards.find((card) => card.id === selectedCard)
+  const selectedPersonId = flow.persons.find((person) => person.id === selected?.personId)?.id
+  const [expandedPeople, setExpandedPeople] = useState(() => {
+    const personId = selectedPersonId ?? flow.persons[0]?.id
+    return new Set(personId === undefined ? [] : [personId])
+  })
+  const expandPerson = (id: number) => setExpandedPeople((current) => current.has(id) ? current : new Set([...current, id]))
   const unassigned = flow.namecards.filter((card) => !flow.persons.some((person) => person.id === card.personId))
+  const createPerson = () => change((current) => {
+    const updated = addPerson(current, t('editor.defaultPersonName'))
+    expandPerson(current.nextPersonId)
+    return updated
+  })
   const createCard = (personId: number | null) => change((current) => {
     const updated = addCard(current, personId)
-    selectCard(current.nextId)
+    selectCard(current.nextNamecardId)
     return updated
   })
   const cards = (items: GameCard[]) => <ol className="fe-card-list">
     {items.map((card) => <li key={card.id}>
-      <button className={`fe-card-tile${selectedCard === card.id ? ' fe-selected' : ''}`} type="button"
+      <button className={`fe-card-tile${selectedCard === card.id ? ' fe-selected' : ''}${invalidCardIds.has(card.id) ? ' fe-invalid-card' : ''}`} type="button"
         aria-pressed={selectedCard === card.id} onClick={() => selectCard(card.id)}>
-        <span><strong>{card.year}</strong> · #{card.id}{flow.startingCards.includes(card.id) ? ' · Starting' : ''}</span>
-        <strong>{card.personDisplayName || 'Unnamed card'}</strong>
-        <span>{card.role || 'No role'} · {card.company || 'No company'}</span>
+        <span><strong>{card.year}</strong> · #{card.id}{starting.has(card.id) ? t('editor.startingBadge') : ''}
+          {invalidCardIds.has(card.id) && <span className="fe-badge fe-badge--error" role="img"
+            aria-label={t('common.validationError')} title={t('common.validationError')}>!</span>}
+        </span>
+        <strong>{card.personDisplayName || t('common.unnamedCard')}</strong>
+        <span>{card.role || t('common.noRole')} · {card.company || t('common.noCompany')}</span>
       </button>
     </li>)}
   </ol>
   return <div className="fe-person-layout">
     <div className="fe-person-list">
       <div className="fe-section-heading">
-        <div><h2>People &amp; answer keys</h2><p className="fe-help">Cards are ordered by year, then ID. Each person has one binder page with up to eight cards.</p></div>
-        <button type="button" onClick={() => change((current) => addPerson(current))}>+ Person</button>
+        <div><h2>{t('editor.peopleTitle')}</h2><p className="fe-help">{t('editor.peopleHelp')}</p></div>
+        <button type="button" onClick={createPerson}>{t('editor.addPerson')}</button>
       </div>
-      {flow.persons.length === 0 && <p className="fe-empty">No people yet. Add a person to create their binder page and telephone event.</p>}
-      {flow.persons.map((person) => <section key={person.id} className="fe-panel" aria-label={`Person #${person.id}`}>
-        <div className="fe-section-heading">
-          <label className="fe-person-name">Person #{person.id} · name
-            <input value={person.name} onChange={(event) => change((current) => renamePerson(current, person.id, event.target.value))} />
-          </label>
-          <span className="fe-badge">{person.namecards.length}/8 cards</span>
-        </div>
-        {cards(person.namecards.flatMap((id) => flow.namecards.filter((card) => card.id === id)))}
-        {person.namecards.length === 0 && <p className="fe-help">{flow.telephoneEvents.some((phone) => phone.personId === person.id)
-          ? 'An empty page is allowed. Its telephone can be called immediately.'
-          : 'This empty person has no telephone. Adding or assigning a card recreates it; you can also add a telephone in Flowchart View.'}</p>}
-        <div className="fe-actions">
-          <button type="button" disabled={person.namecards.length >= 8} onClick={() => createCard(person.id)}>+ Card for this person</button>
-          <button type="button" className="fe-danger" onClick={() => {
-            if (window.confirm(`Remove ${person.name || `person #${person.id}`} and their telephone event? All ${person.namecards.length} cards will be kept as unassigned drafts. Telephone unlock relations will be removed.`)) {
-              change((current) => removePerson(current, person.id))
-            }
-          }}>Remove person; keep cards</button>
+      {flow.persons.length === 0 && <p className="fe-empty">{t('editor.noPeople')}</p>}
+      {flow.persons.map((person) => <section key={person.id} className="fe-panel" aria-label={t('common.personId', { id: person.id })}>
+        <h3>
+          <button type="button" className="fe-person-toggle" aria-expanded={expandedPeople.has(person.id)}
+            aria-controls={`person-${person.id}-content`} onClick={() => setExpandedPeople((current) => {
+              const next = new Set(current)
+              if (next.has(person.id)) next.delete(person.id)
+              else next.add(person.id)
+              return next
+            })}>
+            <svg className="fe-person-chevron" viewBox="0 0 16 16" aria-hidden="true">
+              <path d="M6 3 L11 8 L6 13" fill="none" stroke="currentColor" strokeWidth="2" />
+            </svg>
+            <span className="fe-person-summary">
+              <strong>{person.name || t('common.unnamedPerson')}</strong>
+              <span className="fe-person-id">{t('common.personId', { id: person.id })}</span>
+            </span>
+            <span className="fe-badge">{t('editor.personCardCount', { count: person.namecards.length })}</span>
+          </button>
+        </h3>
+        <div id={`person-${person.id}-content`} className="fe-person-content" hidden={!expandedPeople.has(person.id)}>
+          <div className="fe-section-heading">
+            <label className="fe-person-name">{t('editor.personName', { id: person.id })}
+              <input value={person.name} onChange={(event) => change((current) => renamePerson(current, person.id, event.target.value))} />
+            </label>
+          </div>
+          {cards(person.namecards.flatMap((id) => flow.namecards.filter((card) => card.id === id)))}
+          {person.namecards.length === 0 && <p className="fe-help">{t(flow.telephoneEvents.some((phone) => phone.personId === person.id)
+            ? 'editor.emptyPersonWithPhone' : 'editor.emptyPersonWithoutPhone')}</p>}
+          <div className="fe-actions">
+            <button type="button" disabled={person.namecards.length >= 8} onClick={() => createCard(person.id)}>{t('editor.addOwnedCard')}</button>
+            <button type="button" className="fe-danger" onClick={() => {
+              if (window.confirm(t('editor.confirmRemovePerson', {
+                name: person.name || t('common.personId', { id: person.id }), count: person.namecards.length,
+              }))) {
+                change((current) => removePerson(current, person.id))
+              }
+            }}>{t('editor.removePerson')}</button>
+          </div>
         </div>
       </section>)}
       <section className="fe-panel" aria-labelledby="unassigned-title">
         <div className="fe-section-heading">
-          <h2 id="unassigned-title">Unassigned drafts ({unassigned.length})</h2>
-          <button type="button" onClick={() => createCard(null)}>+ Unassigned card</button>
+          <h2 id="unassigned-title">{t('editor.unassignedTitle', { count: unassigned.length })}</h2>
+          <button type="button" onClick={() => createCard(null)}>{t('editor.addUnassignedCard')}</button>
         </div>
-        <p className="fe-help">Drafts are saved locally, but every card needs an owner before game export.</p>
+        <p className="fe-help">{t('editor.draftsHelp')}</p>
         {cards(unassigned)}
       </section>
     </div>
     <aside className="fe-edit-column">
       {selected
-        ? <CardEditor card={selected} flow={flow} change={change} />
-        : <div className="fe-panel fe-empty">Select a card to edit its fields, owner, or starting status.</div>}
+        ? <CardEditor card={selected} flow={flow} change={change} invalid={invalidCardIds.has(selected.id)} onOwnerChange={(personId) => {
+          if (personId !== null) expandPerson(personId)
+        }} />
+        : <div className="fe-panel fe-empty">{t('editor.selectCard')}</div>}
     </aside>
   </div>
 }
 
-function EventNode({ flow, id, change, editCard }: {
+function EventNode({ flow, id, change, editCard, invalidCardIds }: {
   flow: GameFlow; id: number; change: ChangeFlow; editCard: (id: number) => void
+  invalidCardIds: ReadonlySet<number>
 }) {
+  const { t } = useI18n()
   const [target, setTarget] = useState('')
-  const card = flow.namecards.find((item) => item.id === id)
-  const phone = flow.telephoneEvents.find((item) => item.id === id)
+  const card = flow.namecards.find((item) => item.objectId === id)
+  const phone = flow.telephoneEvents.find((item) => item.objectId === id)
   const source = card ?? phone!
+  const invalid = card !== undefined && invalidCardIds.has(card.id)
+  const allUnlocked = flow.mode === 'all-unlocked'
+  const starting = card !== undefined && startingCardIds(flow).includes(card.id)
   const manual = source.unlocks.filter((targetId) => !isAutomaticRelation(flow, id, targetId))
   const automatic = source.unlocks.filter((targetId) => isAutomaticRelation(flow, id, targetId))
-  const incoming = card ? incomingConditions(flow, id) : flow.persons.find((person) => person.id === phone?.personId)?.namecards ?? []
-  const targets = flow.namecards.filter((item) => item.id !== id && !source.unlocks.includes(item.id))
+  const incoming = card ? incomingConditions(flow, card.id)
+    : flow.namecards.filter((item) => item.personId === phone?.personId)
+      .sort((a, b) => a.year - b.year || a.id - b.id).map((item) => item.objectId)
+  const targets = flow.namecards.filter((item) => item.objectId !== id && !source.unlocks.includes(item.objectId))
   const relation = (targetId: number, auto: boolean) => <li key={targetId} className="fe-relation">
     <span className="fe-edge-origin">#{id}</span><Arrow automatic={auto} />
-    <span className="fe-sr-only">{auto ? 'contributes to the exact completed page for' : 'is an unlock condition for'}</span>
-    <a href={`#event-${targetId}`}>{eventLabel(flow, targetId)}</a>
+    <span className="fe-sr-only">{t(auto ? 'editor.automaticRelationDescription' : 'editor.manualRelationDescription')}</span>
+    <a href={`#event-${targetId}`}>{eventLabel(flow, targetId, t)}</a>
     {auto
-      ? <span className="fe-badge">Automatic · read-only</span>
-      : <button type="button" className="fe-remove-edge" aria-label={`Remove relation from #${id} to #${targetId}`}
-        onClick={() => change((current) => setUnlock(current, id, targetId, false))}>Remove</button>}
+      ? <span className="fe-badge">{t('editor.automaticReadOnly')}</span>
+      : <button type="button" className="fe-remove-edge" aria-label={t('editor.removeRelation', { source: id, target: targetId })}
+        onClick={() => change((current) => setUnlock(current, id, targetId, false))}>{t('common.remove')}</button>}
   </li>
-  return <article id={`event-${id}`} className={`fe-panel fe-event-node${phone ? ' fe-event-node--phone' : ''}`} tabIndex={-1}>
+  return <article id={`event-${id}`} className={`fe-panel fe-event-node${phone ? ' fe-event-node--phone' : ''}${invalid ? ' fe-invalid-card' : ''}`} tabIndex={-1}>
     <div className="fe-section-heading">
-      <h3>{eventLabel(flow, id)}</h3>
-      {card && <button type="button" onClick={() => editCard(id)}>Edit card</button>}
+      <h3>{eventLabel(flow, id, t)}</h3>
+      {invalid && <span className="fe-badge fe-badge--error">{t('common.validationError')}</span>}
+      {card && <button type="button" onClick={() => editCard(card.id)}>{t('common.editCard')}</button>}
     </div>
     {card ? <>
-      <label className="fe-check"><input type="checkbox" checked={flow.startingCards.includes(id)}
-        onChange={(event) => change((current) => setStartingCard(current, id, event.target.checked))} />Starting card</label>
-      <p className="fe-help">Source activates when the player reads this card’s nonblank back text.</p>
-      <p className="fe-back-preview">{card.backText || 'Blank back — add text before using card-to-card relations.'}</p>
-      <strong>{flow.startingCards.includes(id) ? 'Starting cards bypass incoming requirements.' : 'Unlock requires ALL incoming sources (AND):'}</strong>
+      <label className="fe-check"><input type="checkbox" checked={starting} disabled={allUnlocked}
+        onChange={(event) => change((current) => setStartingCard(current, card.id, event.target.checked))} />{t('common.startingCard')}</label>
+      <p className="fe-help">{t(allUnlocked ? 'editor.allUnlockedBackHelp' : 'editor.cardActivation')}</p>
+      <p className="fe-back-preview">{card.backText || t(allUnlocked ? 'inspection.blankBack' : 'editor.blankBackPreview')}</p>
+      <strong>{t(starting ? 'editor.startingRequirements' : 'editor.allRequirements')}</strong>
     </> : <>
-      <p className="fe-help">Activates only when the player calls after completing this person’s exact page in chronological order. Reading card backs does not activate the telephone.</p>
-      <strong>Automatic prerequisites — complete this exact page:</strong>
+      <p className="fe-help">{t('editor.telephoneActivation')}</p>
+      <strong>{t('editor.automaticPrerequisites')}</strong>
     </>}
     {incoming.length
-      ? <ul className="fe-incoming">{incoming.map((sourceId) => <li key={sourceId}><a href={`#event-${sourceId}`}>{eventLabel(flow, sourceId)}</a></li>)}</ul>
-      : <p className="fe-help">{card
-        ? flow.startingCards.includes(id) ? 'Available at the start; no incoming conditions.' : 'No incoming conditions. Make this a starting card or add a relation from another event.'
-        : 'Empty page: no card prerequisites; the player must still make the call.'}</p>}
-    <h4>Outgoing directed relations</h4>
-    {manual.length + automatic.length === 0 && <p className="fe-help">No outgoing relations.</p>}
+      ? <ul className="fe-incoming">{incoming.map((sourceId) => <li key={sourceId}><a href={`#event-${sourceId}`}>{eventLabel(flow, sourceId, t)}</a></li>)}</ul>
+      : <p className="fe-help">{t(card
+        ? starting ? 'editor.noStartingConditions' : 'editor.noIncomingConditions'
+        : 'editor.emptyPagePrerequisites')}</p>}
+    <h4>{t('editor.outgoingRelations')}</h4>
+    {manual.length + automatic.length === 0 && <p className="fe-help">{t('editor.noOutgoingRelations')}</p>}
     <ul className="fe-relations">{manual.map((targetId) => relation(targetId, false))}{automatic.map((targetId) => relation(targetId, true))}</ul>
     <form className="fe-add-edge" onSubmit={(event) => {
       event.preventDefault()
-      if (target !== '' && targets.some((item) => item.id === Number(target))) {
+      if (target !== '' && targets.some((item) => item.objectId === Number(target))) {
         change((current) => setUnlock(current, id, Number(target), true))
         setTarget('')
       }
     }}>
-      <label>Add a card this {card ? 'card' : 'telephone'} unlocks
-        <select value={targets.some((item) => String(item.id) === target) ? target : ''} onChange={(event) => setTarget(event.target.value)}>
-          <option value="">Select target card</option>
-          {targets.map((item) => <option key={item.id} value={item.id}>{cardLabel(item)}</option>)}
+      <label>{t(card ? 'editor.addCardUnlock' : 'editor.addTelephoneUnlock')}
+        <select value={targets.some((item) => String(item.objectId) === target) ? target : ''} onChange={(event) => setTarget(event.target.value)}>
+          <option value="">{t('common.selectTarget')}</option>
+          {targets.map((item) => <option key={item.objectId} value={item.objectId}>{cardLabel(item, t)}</option>)}
         </select>
       </label>
-      <button type="submit" disabled={!targets.some((item) => String(item.id) === target)}>Add relation</button>
+      <button type="submit" disabled={!targets.some((item) => String(item.objectId) === target)}>{t('common.addRelation')}</button>
     </form>
   </article>
 }
 
-function EventView({ flow, change, editCard }: { flow: GameFlow; change: ChangeFlow; editCard: (id: number) => void }) {
-  const sources = [...flow.namecards, ...flow.telephoneEvents].sort((a, b) => a.id - b.id)
+function EventView({ flow, change, editCard, invalidCardIds }: {
+  flow: GameFlow; change: ChangeFlow; editCard: (id: number) => void; invalidCardIds: ReadonlySet<number>
+}) {
+  const { t } = useI18n()
+  const sources = [...flow.namecards, ...flow.telephoneEvents].sort((a, b) => a.objectId - b.objectId)
   return <section aria-labelledby="events-title">
-    <h2 id="events-title">Event graph · linked adjacency view</h2>
-    <p className="fe-help">Solid arrows are editable card-unlock conditions. Dashed arrows are automatic ownership-to-telephone links.
-      Multiple incoming conditions are AND, never OR. Starting cards are already available.</p>
-    <nav className="fe-event-index" aria-label="Jump to event">
-      {sources.map((source) => <a key={source.id} href={`#event-${source.id}`}>{flow.namecards.some((card) => card.id === source.id) ? 'Card' : 'Phone'} #{source.id}</a>)}
+    <h2 id="events-title">{t('editor.eventsTitle')}</h2>
+    <p className="fe-help">{t(flow.mode === 'all-unlocked' ? 'editor.allUnlockedHelp' : 'editor.eventsHelp')}</p>
+    <nav className="fe-event-index" aria-label={t('editor.jumpToEvent')}>
+      {sources.map((source) => <a key={source.objectId} href={`#event-${source.objectId}`}>{t(flow.namecards.some((card) => card.objectId === source.objectId) ? 'common.card' : 'common.phone')} #{source.id}</a>)}
     </nav>
-    {sources.length === 0 && <p className="fe-empty">Add people and cards in Person View or Flowchart View to build the event graph.</p>}
-    <div className="fe-event-list">{sources.map((source) => <EventNode key={source.id} flow={flow} id={source.id} change={change} editCard={editCard} />)}</div>
+    {sources.length === 0 && <p className="fe-empty">{t('editor.noEvents')}</p>}
+    <div className="fe-event-list">{sources.map((source) => <EventNode key={source.objectId} flow={flow} id={source.objectId}
+      change={change} editCard={editCard} invalidCardIds={invalidCardIds} />)}</div>
   </section>
 }
 
 function UnreachableEventsWarning({ flow, ids }: { flow: GameFlow; ids: number[] }) {
+  const { t } = useI18n()
   const [visible, setVisible] = useState(true)
   const [focused, setFocused] = useState(false)
 
@@ -239,36 +305,40 @@ function UnreachableEventsWarning({ flow, ids }: { flow: GameFlow; ids: number[]
   }, [visible, focused])
 
   if (!visible) return null
-  return <aside className="fe-reachability-warning" role="status" aria-live="polite" aria-label="Unreachable events"
+  return <aside className="fe-reachability-warning" role="status" aria-live="polite" aria-label={t('editor.unreachableLabel')}
     onFocusCapture={() => setFocused(true)}
     onBlurCapture={(event) => {
       if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false)
     }}>
     <div className="fe-reachability-warning__heading">
-      <strong>Warning: {ids.length} unreachable event{ids.length === 1 ? '' : 's'}</strong>
-      <button type="button" className="fe-reachability-warning__dismiss" aria-label="Dismiss unreachable events warning"
+      <strong>{t(ids.length === 1 ? 'editor.unreachableOne' : 'editor.unreachableMany', { count: ids.length })}</strong>
+      <button type="button" className="fe-reachability-warning__dismiss" aria-label={t('editor.dismissUnreachable')}
         onClick={() => setVisible(false)}>X</button>
     </div>
-    <p>These cards or telephone calls cannot be reached from the starting cards. All incoming conditions must be satisfied.</p>
+    <p>{t('editor.unreachableHelp')}</p>
     <details>
-      <summary>Show unreachable events</summary>
-      <ul>{ids.map((id) => <li key={id}>{eventLabel(flow, id)}</li>)}</ul>
+      <summary>{t('editor.showUnreachable')}</summary>
+      <ul>{ids.map((id) => <li key={id}>{eventLabel(flow, id, t)}</li>)}</ul>
     </details>
   </aside>
 }
 
 export default function EditorApp() {
+  const { t, format } = useI18n()
+  // Language changes must not reload or rename the open document.
+  const initialT = useRef(t)
   const [flowchart, setFlowchart] = useState<FlowchartDocument | null>(null)
   const [flowcharts, setFlowcharts] = useState<FlowchartSummary[]>([])
   const [titleDraft, setTitleDraft] = useState('')
   const [view, setView] = useState<'people' | 'events' | 'flowchart'>('flowchart')
+  const [sampleDataset, setSampleDataset] = useState<string>(DEFAULT_SAMPLE_DATASET.id)
   const [revision, setRevision] = useState(0)
   const [selectedCard, setSelectedCard] = useState<number | null>(null)
   const [busy, setBusy] = useState(true)
-  const [loadError, setLoadError] = useState('')
-  const [storageError, setStorageError] = useState('')
-  const [actionError, setActionError] = useState('')
-  const [notice, setNotice] = useState('')
+  const [loadError, setLoadError] = useState<LocalizedText>('')
+  const [storageError, setStorageError] = useState<LocalizedText>('')
+  const [actionError, setActionError] = useState<LocalizedText>('')
+  const [notice, setNotice] = useState<LocalizedText>('')
   const [saved, setSaved] = useState<string | null>(null)
   const importInput = useRef<HTMLInputElement>(null)
   const unsavedChanges = useRef(false)
@@ -290,7 +360,7 @@ export default function EditorApp() {
       setStorageError('')
       return true
     } catch (error) {
-      setStorageError(`This flowchart could not be saved locally: ${message(error)} Keep this tab open, retry saving, or download a draft backup.`)
+      setStorageError(msg('editor.errors.save', { error: message(error) }))
       return false
     }
   }, [])
@@ -307,7 +377,7 @@ export default function EditorApp() {
           const restored = getFlowchart(id)
           if (active) {
             commit({ ...restored, gameflow: readEditorDraft(restored.gameflow) })
-            setNotice(`Opened "${restored.title}". Each flowchart keeps its own gameflow JSON.`)
+            setNotice(msg('editor.notice.restored', { title: restored.title }))
           }
           return
         }
@@ -315,23 +385,27 @@ export default function EditorApp() {
         if (draft !== null) {
           const restored = readEditorDraft(JSON.parse(draft))
           if (active) {
-            commit(createFlowchart(restored, 'My flowchart'))
-            setNotice('Your previous editor draft is open as a flowchart. The original draft has been kept as a backup.')
+            commit(createFlowchart(restored, initialT.current('editor.myFlowchartTitle')))
+            setNotice(msg('editor.notice.migrated'))
           }
           return
         }
       } catch (error) {
-        if (active) setLoadError(`Could not open a saved flowchart: ${message(error)} No stored data has been overwritten. Choose another saved flowchart, import JSON, or create a new flowchart.`)
+        if (active) setLoadError(msg('editor.errors.restore', { error: message(error) }))
         return
       }
       try {
         const loaded = await loadGameFlow()
         if (active) {
-          commit(createFlowchart(readEditorDraft(loaded.flow), loaded.source.startsWith('sample_gameflow') ? 'Sample flowchart' : 'My flowchart'))
-          setNotice(`Loaded ${loaded.source}.`)
+          const initialFlow = readEditorDraft(loaded.flow)
+          commit(createFlowchart(
+            { ...initialFlow, mode: initialFlow.mode ?? 'all-unlocked' },
+            initialT.current(loaded.sourceMessage?.key === 'game.source.sample' ? 'editor.sampleFlowchartTitle' : 'editor.myFlowchartTitle'),
+          ))
+          setNotice(msg('editor.notice.loaded', { source: loaded.sourceMessage ?? loaded.source }))
         }
       } catch (error) {
-        if (active) setLoadError(`Could not load a game flow: ${message(error)} Import JSON, retry the public file, or create a new flowchart.`)
+        if (active) setLoadError(msg('editor.errors.load', { error: message(error) }))
       }
     }
     void initialize().finally(() => { if (active) setBusy(false) })
@@ -361,10 +435,12 @@ export default function EditorApp() {
       setActionError(message(error))
     }
   }
-  const errors = flow ? validateFlow(flow) : []
+  const issues = useMemo(() => flow ? flowValidationIssues(flow) : [], [flow])
+  const errors = issues.map((issue) => t(issue.key, issue.values))
+  const invalidCardIds = useMemo(() => new Set(issues.flatMap((issue) => issue.cardIds ?? [])), [issues])
   const unreachable = useMemo(() => flow ? unreachableEventIds(flow) : [], [flow])
   const editCard = (id: number) => { setSelectedCard(id); setView('people') }
-  const openDocument = (next: FlowchartDocument, detail: string) => {
+  const openDocument = (next: FlowchartDocument, detail: LocalizedText) => {
     commit(next)
     setRevision((value) => value + 1)
     setSelectedCard(null)
@@ -373,22 +449,20 @@ export default function EditorApp() {
     setActionError('')
     setNotice(detail)
   }
-  const replace = (next: GameFlow, detail: string, title = 'Imported flowchart') => {
+  const replace = (next: GameFlow, detail: LocalizedText, title = t('editor.importedFlowchartTitle')) => {
     openDocument(flowchart ? { ...flowchart, gameflow: next } : createFlowchart(next, title), detail)
   }
-  const confirmLeave = () => !unsaved || window.confirm('This flowchart has unsaved changes. Download a draft backup or retry saving before leaving to keep them. Leave this flowchart anyway?')
-  const confirmReplace = () => !flowchart || window.confirm(`Replace the gameflow for "${flowchart.title}"? Download a draft backup first if you want to keep it. Other saved flowcharts will not be changed.`)
+  const confirmLeave = () => !unsaved || window.confirm(t('editor.confirmLeave'))
+  const confirmReplace = () => !flowchart || window.confirm(t('editor.confirmReplace', { title: flowchart.title }))
   const download = (draft: boolean) => {
     if (!flow) return
     try {
       const normalized = synchronizeFlow(flow)
       const problems = draft ? [] : validateFlow(normalized)
-      if (problems.length) throw new Error(`Game export blocked: fix the ${problems.length} validation issue(s) below. Draft backup is still available.`)
+      if (problems.length) throw new LocalizedError('editor.errors.exportBlocked', { count: problems.length })
       downloadFlow(normalized, draft ? 'gameflow.draft.json' : 'gameflow.json')
       setActionError('')
-      setNotice(draft
-        ? 'Draft backup download requested. It may be incomplete and is for editor import, not gameplay.'
-        : 'This flowchart\'s gameflow.json download was requested. Use the play button to play it directly, or import the download into another browser.')
+      setNotice(msg(draft ? 'editor.notice.draftDownloaded' : 'editor.notice.exported'))
     } catch (error) {
       setActionError(message(error))
     }
@@ -398,9 +472,9 @@ export default function EditorApp() {
     try {
       const normalized = synchronizeFlow(flowchart.gameflow)
       const problems = validateFlow(normalized)
-      if (problems.length) throw new Error(`Playback blocked: fix the ${problems.length} validation issue(s) below. Draft backup is still available.`)
+      if (problems.length) throw new LocalizedError('editor.errors.playBlocked', { count: problems.length })
       if (!commit({ ...flowchart, gameflow: normalized })) {
-        setActionError('Playback blocked because the current flowchart could not be saved. Retry local save before playing.')
+        setActionError(msg('editor.errors.playNotSaved'))
         return
       }
       window.location.assign(playFlowchartUrl(flowchart.id))
@@ -410,10 +484,10 @@ export default function EditorApp() {
   }
   return <main className="flow-editor">
     <header className="fe-header">
-      <div><p className="fe-eyebrow">BUSINESS CARD ARCHIVE / AUTHORING</p><h1>Game state editor</h1><p>Build people, their career histories, and the clues connecting them.</p></div>
+      <div><p className="fe-eyebrow">{t('editor.eyebrow')}</p><h1>{t('editor.title')}</h1><p>{t('editor.subtitle')}</p></div>
       <div className="fe-header-actions">
-        <button type="button" className="fe-primary fe-play" aria-label="Play current flowchart"
-          title={flowchart ? `Play ${flowchart.title}` : 'Open a flowchart to play'}
+        <button type="button" className="fe-primary fe-play" aria-label={t('editor.playCurrent')}
+          title={flowchart ? t('editor.playTitle', { title: flowchart.title }) : t('editor.openToPlay')}
           disabled={busy || !flowchart} onClick={play}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4 L21 12 L7 20 Z" fill="currentColor" /></svg>
         </button>
@@ -421,16 +495,16 @@ export default function EditorApp() {
     </header>
     <div className="fe-editor-layout">
       <aside className="fe-flowchart-library fe-panel" aria-labelledby="flowchart-library-title">
-        <h2 id="flowchart-library-title">Saved flowcharts</h2>
+        <h2 id="flowchart-library-title">{t('editor.savedFlowcharts')}</h2>
         <button type="button" disabled={busy} onClick={() => {
           if (!confirmLeave()) return
           try {
-            openDocument(createFlowchart(), 'Created a new blank flowchart. Your other flowcharts are still saved. Entity IDs begin at 0 in this document.')
+            openDocument(createFlowchart(undefined, t('editor.defaultFlowchartTitle')), msg('editor.notice.created'))
           } catch (error) {
-            setActionError(`Could not create a flowchart: ${message(error)}`)
+            setActionError(msg('editor.errors.create', { error: message(error) }))
           }
-        }}>+ New flowchart</button>
-        <nav className="fe-flowchart-navigation" aria-label="Saved flowcharts">
+        }}>{t('editor.newFlowchart')}</button>
+        <nav className="fe-flowchart-navigation" aria-label={t('editor.savedFlowcharts')}>
           {flowcharts.length > 0 ? <ul className="fe-flowchart-list">
             {flowcharts.map((item) => <li key={item.id}>
               <button type="button" disabled={busy} aria-current={flowchart?.id === item.id ? 'page' : undefined}
@@ -438,39 +512,54 @@ export default function EditorApp() {
                   if (flowchart?.id === item.id || !confirmLeave()) return
                   try {
                     const restored = getFlowchart(item.id)
-                    openDocument({ ...restored, gameflow: readEditorDraft(restored.gameflow) }, `Opened "${restored.title}".`)
+                    openDocument({ ...restored, gameflow: readEditorDraft(restored.gameflow) }, msg('editor.notice.opened', { title: restored.title }))
                   } catch (error) {
-                    setActionError(`Could not open that flowchart; the current flowchart was kept: ${message(error)}`)
+                    setActionError(msg('editor.errors.open', { error: message(error) }))
                   }
                 }}>
                 <span className="fe-flowchart-list-title">{item.title}</span>
                 <span className="fe-flowchart-list-id">{item.id.slice(0, 8)}</span>
               </button>
             </li>)}
-          </ul> : <p className="fe-help">{busy ? 'Loading flowcharts...' : 'No saved flowcharts yet.'}</p>}
+          </ul> : <p className="fe-help">{t(busy ? 'editor.loadingFlowcharts' : 'editor.noSavedFlowcharts')}</p>}
         </nav>
       </aside>
       <div className="fe-editor-content">
-        {flowchart && <section className="fe-flowchart-details fe-panel" aria-label="Current flowchart">
+        {flowchart && <section className="fe-flowchart-details fe-panel" aria-label={t('editor.currentFlowchart')}>
           <form className="fe-flowchart-title" onSubmit={(event) => {
             event.preventDefault()
             try {
               const renamed = renameFlowchart(flowchart, titleDraft)
               commit(renamed)
               setActionError('')
-              setNotice(`Renamed to "${renamed.title}". Its ID and gameflow are unchanged.`)
+              setNotice(msg('editor.notice.renamed', { title: renamed.title }))
             } catch (error) {
               setActionError(message(error))
             }
           }}>
-            <label>Flowchart title<input value={titleDraft} disabled={busy} onChange={(event) => setTitleDraft(event.target.value)} /></label>
-            <button type="submit" disabled={busy || titleDraft === flowchart.title}>Rename</button>
+            <label>{t('editor.flowchartTitle')}<input value={titleDraft} disabled={busy} onChange={(event) => setTitleDraft(event.target.value)} /></label>
+            <button type="submit" disabled={busy || titleDraft === flowchart.title}>{t('editor.rename')}</button>
           </form>
-          <p className="fe-help fe-flowchart-id">Permanent ID: <code>{flowchart.id}</code></p>
+          <p className="fe-help fe-flowchart-id">{t('editor.permanentId')} <code>{flowchart.id}</code></p>
+          <label>{t('editor.gameMode')}
+            <select value={flowchart.gameflow.mode ?? 'progression'} disabled={busy} aria-describedby="game-mode-help"
+              onChange={(event) => {
+                const mode = event.target.value
+                change((current) => {
+                  if (mode !== 'progression' && mode !== 'all-unlocked') throw new LocalizedError('errors.mode')
+                  return { ...current, mode }
+                })
+              }}>
+              <option value="progression">{t('editor.modeProgression')}</option>
+              <option value="all-unlocked">{t('editor.modeAllUnlocked')}</option>
+            </select>
+          </label>
+          <p id="game-mode-help" className="fe-help">{t(flowchart.gameflow.mode === 'all-unlocked'
+            ? 'editor.allUnlockedHelp' : 'editor.progressionHelp')}</p>
         </section>}
-        <section className="fe-toolbar" aria-label="File and draft actions">
-          <button type="button" disabled={busy} onClick={() => importInput.current?.click()}>Import JSON</button>
-          <input className="fe-file-input" type="file" accept=".json,application/json" ref={importInput} aria-label="Import gameflow JSON"
+        <section className="fe-toolbar" aria-label={t('editor.fileActions')}>
+          <button type="button" disabled={busy} onClick={() => importInput.current?.click()}>{t('editor.import')}</button>
+          <input className="fe-file-input" type="file" accept=".json,application/json" ref={importInput} aria-label={t('editor.importLabel')}
             onChange={async (event) => {
               const file = event.target.files?.[0]
               event.target.value = ''
@@ -478,9 +567,9 @@ export default function EditorApp() {
               setBusy(true)
               try {
                 const imported = readEditorDraft(JSON.parse(await file.text()))
-                if (confirmReplace()) replace(imported, `Imported ${file.name}. Derived answer keys and telephone links were refreshed; missing telephones were created for people with cards.`, file.name.replace(/\.json$/i, ''))
+                if (confirmReplace()) replace(imported, msg('editor.notice.imported', { filename: file.name }), file.name.replace(/\.json$/i, ''))
               } catch (error) {
-                setActionError(`Import failed; your current draft was kept: ${message(error)}`)
+                setActionError(msg('editor.errors.import', { error: message(error) }))
               } finally {
                 setBusy(false)
               }
@@ -490,55 +579,77 @@ export default function EditorApp() {
             setBusy(true)
             try {
               const loaded = await loadGameFlow()
-              replace(readEditorDraft(loaded.flow), `Loaded ${loaded.source}.`)
+              replace(readEditorDraft(loaded.flow), msg('editor.notice.loaded', { source: loaded.sourceMessage ?? loaded.source }))
             } catch (error) {
-              setLoadError(`Public file could not be loaded; your current draft was kept: ${message(error)}`)
+              setLoadError(msg('editor.errors.publicFile', { error: message(error) }))
             } finally {
               setBusy(false)
             }
-          }}>Load public file</button>
-          <button type="button" disabled={busy || !flow} onClick={() => download(true)}>Download draft backup</button>
-          <button type="button" className="fe-primary" disabled={busy || !flow} onClick={() => download(false)}>Export gameflow.json</button>
+          }}>{t('editor.loadPublic')}</button>
+          <label>{t('editor.sampleDataset')}
+            <select value={sampleDataset} disabled={busy} onChange={(event) => setSampleDataset(event.target.value)}>
+              {SAMPLE_DATASETS.map((dataset) => <option key={dataset.id} value={dataset.id}>{t(dataset.titleKey, dataset.titleValues)}</option>)}
+            </select>
+          </label>
+          <button type="button" disabled={busy} onClick={async () => {
+            if (!confirmReplace()) return
+            setBusy(true)
+            try {
+              const loaded = await loadSampleDataset(sampleDataset)
+              replace(readEditorDraft(loaded.flow), msg('editor.notice.sampleLoaded', { source: loaded.sourceMessage ?? loaded.source }))
+            } catch (error) {
+              setActionError(msg('editor.errors.sample', { error: message(error) }))
+            } finally {
+              setBusy(false)
+            }
+          }}>{t('editor.loadSample')}</button>
+          <button type="button" disabled={busy || !flow} onClick={() => download(true)}>{t('editor.downloadDraft')}</button>
+          <button type="button" className="fe-primary" disabled={busy || !flow} onClick={() => download(false)}>{t('editor.export')}</button>
         </section>
-        <p className="fe-help fe-export-help">Each flowchart has its own saved gameflow JSON. Use the play button to play the open flowchart.
-          Export and draft backups download only this flowchart. Saved flowcharts are specific to this browser and origin, and are separate from game progress.</p>
+        <p className="fe-help fe-export-help">{t('editor.exportHelp')}</p>
         <div className="fe-status" role="status" aria-live="polite">
-          {busy ? 'Loading…' : flow ? `${flow.persons.length} people · ${flow.namecards.length} cards · ${flow.telephoneEvents.length} telephones · Next ID ${flow.nextId}. ${unsaved ? 'Draft not saved locally.' : 'Draft saved locally.'}` : 'No flow loaded.'}
-          {notice && <p>{notice}</p>}
+          {busy ? t('app.loading') : flow ? t('editor.status', {
+            people: flow.persons.length, cards: flow.namecards.length, phones: flow.telephoneEvents.length,
+            nextPersonId: flow.nextPersonId, nextNamecardId: flow.nextNamecardId,
+            nextTelephoneEventId: flow.nextTelephoneEventId, nextId: flow.nextId,
+            saved: t(unsaved ? 'editor.notSaved' : 'editor.saved'),
+          }) : t('editor.noFlow')}
+          {notice && <p>{format(notice)}</p>}
         </div>
-        {loadError && <div className="fe-alert" role="alert">{loadError}</div>}
-        {storageError && <div className="fe-alert" role="alert">{storageError}
+        {loadError && <div className="fe-alert" role="alert">{format(loadError)}</div>}
+        {storageError && <div className="fe-alert" role="alert">{format(storageError)}
           <button type="button" disabled={!flowchart || busy} onClick={() => {
             if (flowchart && commit(flowchart)) setActionError('')
-          }}>Retry local save</button>
+          }}>{t('editor.retrySave')}</button>
         </div>}
-        {actionError && <div className="fe-alert" role="alert">{actionError}</div>}
+        {actionError && <div className="fe-alert" role="alert">{format(actionError)}</div>}
         {flow && <>
-          <section className={`fe-validation ${errors.length ? 'fe-validation--invalid' : ''}`} aria-label="Play and export validation" aria-live="polite">
+          <section className={`fe-validation ${errors.length ? 'fe-validation--invalid' : ''}`} aria-label={t('editor.validationLabel')} aria-live="polite">
             <details open={errors.length > 0}>
-              <summary>{errors.length ? `${errors.length} issue(s) block play and game export — drafts can still be saved` : 'Ready to play and export · all cards obtainable'}</summary>
+              <summary>{errors.length ? t('editor.validationBlocked', { count: errors.length }) : t('editor.validationReady')}</summary>
               {errors.length > 0 && <ul>{errors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul>}
             </details>
           </section>
           {flow.startingCards.some((id) => !flow.namecards.some((card) => card.id === id)) && <div className="fe-alert">
-            Imported starting set contains missing cards.
+            {t('editor.missingStartingCards')}
             <button type="button" onClick={() => change((current) => ({
               ...current, startingCards: current.startingCards.filter((id) => current.namecards.some((card) => card.id === id)),
-            }))}>Remove missing starting references</button>
+            }))}>{t('editor.removeMissingStartingCards')}</button>
           </div>}
-          <div className="fe-view-switch" role="group" aria-label="Editor view">
-            <button type="button" aria-pressed={view === 'people'} onClick={() => setView('people')}>Person View</button>
-            <button type="button" aria-pressed={view === 'events'} onClick={() => setView('events')}>Event View</button>
-            <button type="button" aria-pressed={view === 'flowchart'} onClick={() => setView('flowchart')}>Flowchart View</button>
+          <div className="fe-view-switch" role="group" aria-label={t('editor.view')}>
+            <button type="button" aria-pressed={view === 'people'} onClick={() => setView('people')}>{t('editor.personView')}</button>
+            <button type="button" aria-pressed={view === 'events'} onClick={() => setView('events')}>{t('editor.eventView')}</button>
+            <button type="button" aria-pressed={view === 'flowchart'} onClick={() => setView('flowchart')}>{t('editor.flowchartView')}</button>
           </div>
           <fieldset className="fe-workspace" disabled={busy}>
-            <legend className="fe-sr-only">{view === 'people' ? 'Person editor' : view === 'events' ? 'Event editor' : 'Flowchart editor'}</legend>
+            <legend className="fe-sr-only">{t(view === 'people' ? 'editor.personEditor' : view === 'events' ? 'editor.eventEditor' : 'editor.flowchartEditor')}</legend>
             {view === 'people'
-              ? <PersonView flow={flow} change={change} selectedCard={selectedCard} selectCard={setSelectedCard} />
+              ? <PersonView flow={flow} change={change} selectedCard={selectedCard} selectCard={setSelectedCard} invalidCardIds={invalidCardIds} />
               : view === 'events'
-                ? <EventView flow={flow} change={change} editCard={editCard} />
+                ? <EventView flow={flow} change={change} editCard={editCard} invalidCardIds={invalidCardIds} />
                 : <EventFlowchart key={revision} flow={flow} change={change} editCard={editCard}
-                  unreachableIds={unreachable} disabled={busy} reportError={setActionError} showEvents={() => setView('events')} />}
+                  unreachableIds={unreachable} invalidCardIds={invalidCardIds} disabled={busy}
+                  reportError={setActionError} showEvents={() => setView('events')} />}
           </fieldset>
           {unreachable.length > 0 && <UnreachableEventsWarning key={`${revision}:${unreachable.join(',')}`} flow={flow} ids={unreachable} />}
         </>}

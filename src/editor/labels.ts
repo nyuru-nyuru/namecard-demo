@@ -1,13 +1,19 @@
 import type { GameCard, GameFlow } from '../game/gameflow.ts'
+import { english, type Translator } from '../i18n/messages.ts'
 
-export function cardLabel(card: GameCard): string {
-  return `#${card.id} · ${card.personDisplayName || 'Unnamed card'} · ${card.company || 'No company'} · ${card.year}`
+export function cardLabel(card: GameCard, t: Translator = english): string {
+  return t('editor.cardLabel', {
+    id: card.id, name: card.personDisplayName || t('common.unnamedCard'),
+    company: card.company || t('common.noCompany'), year: card.year,
+  })
 }
 
-export function eventLabel(flow: GameFlow, id: number): string {
-  const card = flow.namecards.find((item) => item.id === id)
-  if (card) return `Card ${cardLabel(card)}`
-  const phone = flow.telephoneEvents.find((item) => item.id === id)
-  if (phone) return `Telephone #${id} · ${flow.persons.find((person) => person.id === phone.personId)?.name || 'Unnamed person'}`
-  return `Missing event #${id}`
+export function eventLabel(flow: GameFlow, id: number, t: Translator = english): string {
+  const card = flow.namecards.find((item) => item.objectId === id)
+  if (card) return t('editor.cardEventLabel', { card: cardLabel(card, t) })
+  const phone = flow.telephoneEvents.find((item) => item.objectId === id)
+  if (phone) return t('editor.telephoneEventLabel', {
+    id: phone.id, name: flow.persons.find((person) => person.id === phone.personId)?.name || t('common.unnamedPerson'),
+  })
+  return t('editor.missingEvent', { id })
 }

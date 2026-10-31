@@ -115,12 +115,21 @@
 .flow-editor .fe-section-heading > button { flex-shrink: 0; }
 .flow-editor .fe-section-heading h2 { margin: 0; }
 .flow-editor .fe-badge { border: 1px solid var(--fe-line); border-radius: 4px; background: #eef2e9; padding: 3px 6px; font-size: 11px; color: #3c5748; }
+.flow-editor .fe-badge--error { border-color: #b75b4b; background: #ffe3d9; color: #7b2c19; }
+.flow-editor .fe-person-toggle { display: flex; align-items: center; gap: 12px; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; }
+.flow-editor .fe-person-toggle .fe-badge { flex-shrink: 0; }
+.flow-editor .fe-person-chevron { width: 16px; height: 16px; flex-shrink: 0; }
+.flow-editor .fe-person-toggle[aria-expanded="true"] .fe-person-chevron { transform: rotate(90deg); }
+.flow-editor .fe-person-summary { display: grid; flex: 1; min-width: 0; gap: 2px; overflow-wrap: anywhere; }
+.flow-editor .fe-person-id { font-size: 12px; font-weight: 400; color: var(--fe-muted); }
+.flow-editor .fe-person-content { padding-top: 16px; }
 .flow-editor .fe-person-name { flex: 1; font-size: 12px; }
 .flow-editor .fe-person-name input { font-size: 16px; }
 .flow-editor .fe-card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); align-items: start; gap: 8px; list-style: none; padding: 0; margin: 0; }
 .flow-editor .fe-card-tile { box-sizing: border-box; width: 100%; aspect-ratio: var(--card-aspect-ratio); display: grid; align-content: start; gap: 4px; text-align: left; font-size: 12px; overflow-wrap: anywhere; border-left: 4px solid #abbda1; }
 .flow-editor .fe-card-tile > strong { font-size: 15px; }
 .flow-editor .fe-card-tile.fe-selected { border-color: var(--fe-accent); background: #e8f3e8; }
+.flow-editor .fe-card-tile .fe-badge--error { padding: 0 4px; margin-left: 6px; font-weight: 700; }
 .flow-editor .fe-card-editor > label { margin-top: 14px; }
 .flow-editor .fe-card-editor .fe-help { margin: 8px 0 0; }
 .flow-editor .fe-empty { padding: 22px; color: var(--fe-muted); }
@@ -129,6 +138,10 @@
 .flow-editor .fe-event-list { display: grid; gap: 18px; }
 .flow-editor .fe-event-node { border-left: 5px solid #92b19e; scroll-margin-top: 16px; }
 .flow-editor .fe-event-node--phone { border-left-color: #b39356; background: #fffaf0; }
+.flow-editor .fe-card-tile.fe-invalid-card,
+.flow-editor .fe-panel.fe-invalid-card,
+.flow-editor .fe-flow-node.fe-invalid-card { border-color: #b75b4b; background: #fff0e9; }
+.flow-editor .fe-card-tile.fe-selected.fe-invalid-card { outline: 2px solid var(--fe-accent); outline-offset: 2px; }
 .flow-editor .fe-event-node:target { outline: 3px solid #358a68; outline-offset: 3px; }
 .flow-editor .fe-event-node > strong { display: block; margin-top: 14px; }
 .flow-editor .fe-incoming { padding-left: 22px; font-size: 13px; }

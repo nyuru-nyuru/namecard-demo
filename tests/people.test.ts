@@ -36,6 +36,7 @@ test('legacy demo cards populate the expanded namecard model', () => {
     for (const card of person.namecards) {
       assert.equal(card.personId, person.id)
       assert.equal(card.personDisplayName, person.name)
+      assert.equal(card.misc, '')
       assert.equal(card.backText, '')
       assert.equal(card.backViewed, false)
     }

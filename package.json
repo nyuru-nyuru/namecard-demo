@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "generate:meisi": "node --experimental-strip-types scripts/generate-meisi-sample.ts",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "preview": "vite preview"
   },

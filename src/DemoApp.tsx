@@ -4,9 +4,12 @@ import ReorderableGrid, {
   type GridOrder,
 } from './components/ReorderableGrid'
 import { people } from './data/people'
+import { useI18n } from './i18n/context.ts'
+import { LocalizedError } from './i18n/messages.ts'
 import './App.css'
 
 function DemoApp() {
+  const { t } = useI18n()
   const [persons, setPersons] = useState(people)
   const [selectedPersonId, setSelectedPersonId] = useState(people[0].id)
   const [columns, setColumns] = useState(1)
@@ -18,15 +21,15 @@ function DemoApp() {
   const selectedPerson = persons.find((person) => person.id === selectedPersonId)
 
   if (!selectedPerson) {
-    throw new Error(`Person ${selectedPersonId} was not found`)
+    throw new LocalizedError('demo.personNotFound', { id: selectedPersonId })
   }
 
   return (
     <main>
-      <h1>Namecards</h1>
-      <div className="grid-controls" role="group" aria-label="Namecard controls">
+      <h1>{t('demo.title')}</h1>
+      <div className="grid-controls" role="group" aria-label={t('demo.controls')}>
         <label>
-          Person
+          {t('demo.person')}
           <select
             value={selectedPersonId}
             onChange={(event) => setSelectedPersonId(Number(event.currentTarget.value))}
@@ -39,7 +42,7 @@ function DemoApp() {
           </select>
         </label>
         <label>
-          Columns
+          {t('demo.columns')}
           <input
             type="number"
             min="1"
@@ -59,34 +62,33 @@ function DemoApp() {
           />
         </label>
         <label>
-          Index order
+          {t('demo.indexOrder')}
           <select
             value={order}
             onChange={(event) =>
               setOrder(event.currentTarget.value === 'column-wise' ? 'column-wise' : 'row-wise')
             }
           >
-            <option value="row-wise">Row-wise</option>
-            <option value="column-wise">Column-wise</option>
+            <option value="row-wise">{t('demo.rowWise')}</option>
+            <option value="column-wise">{t('demo.columnWise')}</option>
           </select>
         </label>
         <label>
-          Direction
+          {t('demo.direction')}
           <select
             value={direction}
             onChange={(event) =>
               setDirection(event.currentTarget.value === 'rtl' ? 'rtl' : 'ltr')
             }
           >
-            <option value="ltr">Left to right</option>
-            <option value="rtl">Right to left</option>
+            <option value="ltr">{t('demo.leftToRight')}</option>
+            <option value="rtl">{t('demo.rightToLeft')}</option>
           </select>
         </label>
       </div>
       {!isColumnInputValid && (
         <p id="columns-error" className="grid-controls__error" role="alert">
-          Enter a positive whole number of columns (at most {Number.MAX_SAFE_INTEGER}).
-          The grid keeps the last valid layout.
+          {t('demo.invalidColumns', { max: Number.MAX_SAFE_INTEGER })}
         </p>
       )}
       <ReorderableGrid

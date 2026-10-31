@@ -60,6 +60,10 @@
 .card-bin h2 { font-family: Georgia, serif; font-size: 22px; }
 .card-bin > p { font-size: 12px; margin-bottom: 20px; }
 .card-pile { max-height: 72vh; overflow-y: auto; overflow-x: hidden; padding: 12px 8px 24px; }
+.bin-slot { position: relative; margin-bottom: -10px; }
+.bin-slot--over { outline: 3px solid var(--highlight); background: #f7dab7; z-index: 2; }
+.bin-slot--end { display: grid; place-items: center; min-height: 48px; margin: 22px 0 0; padding: 8px; border: 1px dashed #aa9475; border-radius: 4px; font-size: 12px; text-align: center; }
+.bin-slot__marker { position: absolute; top: -8px; left: 0; right: 0; z-index: 2; border-top: 3px solid var(--highlight); background: #fffaf0; color: var(--ink); padding: 2px 4px; font-size: 11px; pointer-events: none; }
 .filing-game .business-card, .business-card {
   box-sizing: border-box;
   width: 100%;
@@ -86,8 +90,8 @@
 .filing-game .binder-slot .business-card { font-size: clamp(9px, 5.56cqw, 12px); padding: clamp(6px, 5.56cqw, 12px); gap: clamp(1px, 1.39cqw, 3px); }
 .binder-slot .business-card__name { font-size: clamp(11px, 6.94cqw, 15px); }
 .business-card--dragging { opacity: .35; }
-.card-pile .business-card { margin-bottom: -10px; position: relative; transform: rotate(-2deg); }
-.card-pile .business-card:nth-child(even) { transform: rotate(2deg); }
+.card-pile .business-card { position: relative; transform: rotate(-2deg); }
+.card-pile .bin-slot:nth-child(even) .business-card { transform: rotate(2deg); }
 .card-pile .business-card:hover, .card-pile .business-card:focus-visible { z-index: 1; transform: rotate(0); }
 .bin-empty { font-size: 13px; }
 .drag-preview { transform: rotate(3deg); cursor: grabbing; }
@@ -102,15 +106,21 @@
 .card-inspection__face--back { transform: rotateY(180deg); }
 .card-inspection .business-card--full { font-size: 18px; padding: 24px; white-space: pre-wrap; overflow-y: auto; }
 .business-card--full .business-card__name { font-size: 26px; }
+.business-card--full .business-card__misc { font-size: 12px; }
 .card-inspection > p { font-size: 14px; }
 .game-import { border-top: 1px solid #aeb5a5; margin-top: 24px; padding-top: 16px; display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; }
 .game-import input { display: block; max-width: 100%; margin-top: 8px; }
+.game-import-file { position: relative; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.game-import-file:focus-within { outline: 3px solid #b55832; outline-offset: 3px; }
 @media (max-width: 900px) {
   .filing-game { padding: 16px; }
   .game-table { grid-template-columns: minmax(0, 1fr); }
   .card-bin { position: static; grid-row: 1; }
-  .card-pile { display: flex; gap: 12px; overflow-x: auto; max-height: 220px; padding: 10px; }
-  .card-pile .business-card { flex: none; align-self: flex-start; width: 216px; margin-bottom: 0; }
+  .card-pile { display: flex; overflow-x: auto; max-height: 220px; padding: 10px 4px; }
+  .card-pile .bin-slot { box-sizing: border-box; flex: 0 0 228px; margin: 0; padding: 0 6px; align-self: flex-start; }
+  .card-pile .bin-slot--end { flex-basis: 160px; align-self: stretch; padding: 10px; }
+  .card-pile .bin-slot--end:only-child { flex-basis: 100%; }
+  .card-pile .business-card { width: 216px; }
   .binder-navigation button { font-size: 11px; padding: 8px; }
 }
 @media (max-width: 500px) {

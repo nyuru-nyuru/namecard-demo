@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { GameCard } from '../game/gameflow'
+import { useI18n } from '../i18n/context.ts'
 
 export default function CardInspection({ card, locked, close, readBack, children }: {
   card: GameCard
@@ -11,6 +12,7 @@ export default function CardInspection({ card, locked, close, readBack, children
   inBin: boolean
   children: ReactNode
 }) {
+  const { t } = useI18n()
   const dialog = useRef<HTMLDialogElement>(null)
   const [back, setBack] = useState(false)
   useEffect(() => {
@@ -28,7 +30,7 @@ export default function CardInspection({ card, locked, close, readBack, children
         if (!event.currentTarget.open) close()
       }}
     >
-      <button type="button" className="card-inspection__close" aria-label="Close card inspection" onClick={close}>X</button>
+      <button type="button" className="card-inspection__close" aria-label={t('inspection.close')} onClick={close}>X</button>
       <h2 id="inspection-title">{card.personDisplayName}</h2>
       <div className="card-inspection__scene">
         <div className={`card-inspection__card${back ? ' card-inspection__card--back' : ''}`}>
@@ -36,7 +38,7 @@ export default function CardInspection({ card, locked, close, readBack, children
             {children}
           </div>
           <div className="business-card business-card--full card-inspection__face card-inspection__face--back" aria-hidden={!back} inert={!back}>
-            <p>{card.backText || 'The back of this card is blank.'}</p>
+            <p>{card.backText || t('inspection.blankBack')}</p>
           </div>
         </div>
       </div>
@@ -44,9 +46,9 @@ export default function CardInspection({ card, locked, close, readBack, children
         <button type="button" onClick={() => {
           if (!back) readBack()
           setBack(!back)
-        }}>{back ? 'Show front' : 'Show back'}</button>
+        }}>{t(back ? 'inspection.showFront' : 'inspection.showBack')}</button>
       </div>
-      {locked && <p>This history is complete. The card is locked in place.</p> }
+      {locked && <p>{t('inspection.locked')}</p> }
     </dialog>
   )
 }

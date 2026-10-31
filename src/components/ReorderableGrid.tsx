@@ -19,6 +19,8 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import type { CSSProperties } from 'react'
 import type { Namecard } from '../model/namecard'
+import { useI18n } from '../i18n/context.ts'
+import { dragAccessibility } from '../i18n/dragAccessibility.ts'
 import { getGridPositions, type GridDirection, type GridOrder } from './gridLayout'
 import './ReorderableGrid.css'
 
@@ -41,8 +43,9 @@ function SortableNamecard({
   card: Namecard
   position: Pick<CSSProperties, 'gridRow' | 'gridColumn'>
 }) {
+  const { t } = useI18n()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id })
+    useSortable({ id: card.id, attributes: { roleDescription: t('dnd.draggable') } })
 
   return (
     <li
@@ -66,6 +69,7 @@ export default function ReorderableGrid({
   order = 'row-wise',
   direction = 'ltr',
 }: ReorderableGridProps) {
+  const { t } = useI18n()
   const sensors = useSensors(
     // Small distance/delay thresholds keep clicks and touch scrolling from starting a drag.
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -84,6 +88,10 @@ export default function ReorderableGrid({
   return (
     <DndContext
       sensors={sensors}
+      accessibility={dragAccessibility(t, 'dnd.gridInstructions', (id) => {
+        const card = cards.find((card) => card.id === id)
+        return card ? t('dnd.card', { name: card.personDisplayName, year: card.year }) : t('dnd.item', { id })
+      })}
       collisionDetection={closestCenter}
       modifiers={columns === 1 ? [restrictToVerticalAxis] : undefined}
       onDragEnd={handleDragEnd}
@@ -92,7 +100,7 @@ export default function ReorderableGrid({
         <div className="reorderable-grid-viewport">
           <ul
             className="reorderable-grid"
-            aria-label="Reorderable namecards"
+            aria-label={t('demo.reorderableCards')}
             style={{ gridTemplateColumns: `repeat(${columns}, minmax(240px, 336px))` }}
           >
             {cards.map((card, index) => (

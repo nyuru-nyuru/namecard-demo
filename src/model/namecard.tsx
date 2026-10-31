@@ -5,6 +5,7 @@ export type Namecard = {
     company: string;
     year: number;
     role: string;
+    misc: string;
     backText: string;
     backViewed: boolean;
 };

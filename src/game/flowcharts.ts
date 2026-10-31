@@ -1,4 +1,5 @@
 import { appUrl } from '../urls.ts'
+import { english, LocalizedError } from '../i18n/messages.ts'
 import { emptyFlow, readFlow, type GameFlow } from './gameflow.ts'
 
 const FLOWCHART_PREFIX = 'namecard-game.flowchart.v1.'
@@ -10,17 +11,20 @@ export type FlowchartDocument = FlowchartSummary & { gameflow: GameFlow }
 export type FlowchartStorage = Pick<Storage, 'getItem' | 'setItem' | 'key' | 'length'>
 
 export function flowchartStorageKey(id: string): string {
-  if (!id.trim()) throw new Error('A flowchart ID is required.')
+  if (!id.trim()) throw new LocalizedError('errors.flowchartId')
   return `${FLOWCHART_PREFIX}${id}${FLOWCHART_SUFFIX}`
 }
 
 function displayTitle(title: string): string {
   const trimmed = title.trim()
-  if (!trimmed) throw new Error('A flowchart title cannot be blank.')
+  if (!trimmed) throw new LocalizedError('errors.flowchartTitle')
   return trimmed
 }
 
-export function createFlowchart(gameflow = emptyFlow(), title = 'Untitled flowchart'): FlowchartDocument {
+export function createFlowchart(
+  gameflow: GameFlow = { ...emptyFlow(), mode: 'all-unlocked' },
+  title = english('editor.defaultFlowchartTitle'),
+): FlowchartDocument {
   return { id: crypto.randomUUID(), title: displayTitle(title), gameflow }
 }
 
@@ -30,13 +34,13 @@ export function renameFlowchart(flowchart: FlowchartDocument, title: string): Fl
 
 export function getFlowchart(id: string, storage: FlowchartStorage = localStorage): FlowchartDocument {
   const serialized = storage.getItem(flowchartStorageKey(id))
-  if (serialized === null) throw new Error(`Flowchart "${id}" was not found in this browser. Open the editor to choose a saved flowchart.`)
+  if (serialized === null) throw new LocalizedError('errors.flowchartMissing', { id })
   const value: unknown = JSON.parse(serialized)
   if (value === null || typeof value !== 'object' ||
     !('id' in value) || value.id !== id ||
     !('title' in value) || typeof value.title !== 'string' ||
     !('gameflow' in value)) {
-    throw new Error(`The saved flowchart "${id}" has an invalid document format.`)
+    throw new LocalizedError('errors.flowchartFormat', { id })
   }
   return { id, title: displayTitle(value.title), gameflow: readFlow(value.gameflow) }
 }

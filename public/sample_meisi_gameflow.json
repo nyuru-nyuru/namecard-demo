@@ -1,0 +1,1086 @@
+{
+  "version": 1,
+  "mode": "all-unlocked",
+  "nextId": 71,
+  "nextPersonId": 10,
+  "nextNamecardId": 53,
+  "nextTelephoneEventId": 9,
+  "persons": [
+    {
+      "id": 1,
+      "objectId": 0,
+      "name": "中 美子",
+      "namecards": [
+        45,
+        39,
+        24,
+        20,
+        3
+      ]
+    },
+    {
+      "id": 2,
+      "objectId": 1,
+      "name": "遠藤 陽",
+      "namecards": [
+        46,
+        43,
+        38,
+        29,
+        23,
+        11,
+        0
+      ]
+    },
+    {
+      "id": 3,
+      "objectId": 2,
+      "name": "moca",
+      "namecards": [
+        47,
+        42,
+        37,
+        32,
+        25,
+        18,
+        2
+      ]
+    },
+    {
+      "id": 4,
+      "objectId": 3,
+      "name": "宮本 朗",
+      "namecards": [
+        48,
+        44,
+        35,
+        30,
+        26,
+        21,
+        5
+      ]
+    },
+    {
+      "id": 5,
+      "objectId": 4,
+      "name": "上村 陽",
+      "namecards": [
+        49,
+        40,
+        36,
+        31,
+        27,
+        16,
+        7
+      ]
+    },
+    {
+      "id": 6,
+      "objectId": 5,
+      "name": "梁 太柱",
+      "namecards": [
+        50,
+        33,
+        19,
+        13,
+        9,
+        6
+      ]
+    },
+    {
+      "id": 7,
+      "objectId": 6,
+      "name": "中村 誠二",
+      "namecards": [
+        51,
+        22,
+        14,
+        12,
+        10,
+        8
+      ]
+    },
+    {
+      "id": 8,
+      "objectId": 7,
+      "name": "帝狩 有美",
+      "namecards": [
+        52,
+        41,
+        34,
+        28,
+        17,
+        15,
+        1
+      ]
+    },
+    {
+      "id": 9,
+      "objectId": 8,
+      "name": "横井洋太郎",
+      "namecards": [
+        4
+      ]
+    }
+  ],
+  "namecards": [
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 2017,
+      "company": "サウンドルーム",
+      "companyId": 7,
+      "department": "",
+      "logo": "",
+      "role": "作曲・編曲",
+      "misc": "携帯：070-****-****\n  E-mail：endou@soundroom.***\nWeb：soundroom.***/works",
+      "backText": "請求先：タイガーテイル→本人",
+      "id": 0,
+      "objectId": 9,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 2017,
+      "company": "VIS-Real",
+      "companyId": 10,
+      "department": "",
+      "logo": "",
+      "role": "CG・VR背景美術",
+      "misc": "携帯：***-****-****\n  E-mail：yumi@vis-real.***\nWeb：vis-real.***/portfolio\n  Instagram：@vis-real",
+      "backText": "ハザードから独立",
+      "id": 1,
+      "objectId": 10,
+      "unlocks": [
+        69
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "moca",
+      "year": 2016,
+      "company": "株式会社インフォグラフィック",
+      "companyId": 6,
+      "department": "",
+      "logo": "🐦",
+      "role": "イラストレーター",
+      "misc": "〒***-****\n  東京都練馬区 *** 桜台アトリエ1階\n  TEL：03-****-**14\n  E-mail：y.nishikado@atelier-nishikado.***\n  携帯：070-****-****\nWeb：atelier-nishikado.***/portfolio",
+      "backText": "",
+      "id": 2,
+      "objectId": 11,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 1,
+      "personDisplayName": "中 美子",
+      "year": 2016,
+      "company": "サウンドルーム",
+      "companyId": 7,
+      "department": "",
+      "logo": "",
+      "role": "オーディオプログラマー",
+      "misc": "〒***-****\n  東京都西東京市ひばりが丘 *** 葵ビル2階\n  TEL：042-4**-****\n  E-mail：yoshiko@tigertail.***\n  携帯：070-****-****\nSNS：Twitter @yoshiko_dev\n  Web：endou-music.***",
+      "backText": "",
+      "id": 3,
+      "objectId": 12,
+      "unlocks": [
+        62
+      ]
+    },
+    {
+      "personId": 9,
+      "personDisplayName": "横井洋太郎",
+      "year": 2016,
+      "company": "謎の付箋",
+      "companyId": null,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "",
+      "backText": "",
+      "id": 4,
+      "objectId": 13,
+      "unlocks": [
+        70
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 2015,
+      "company": "株式会社TKB",
+      "companyId": 2,
+      "department": "",
+      "logo": "🐟",
+      "role": "技術顧問",
+      "misc": "〒***-****\n  東京都 ***\n  TEL：03-3***-**38\n  E-mail：miyamoto@tkb.***\n  携帯：070-****-****\nWeb：tkb.***",
+      "backText": "",
+      "id": 5,
+      "objectId": 14,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 6,
+      "personDisplayName": "梁 太柱",
+      "year": 2015,
+      "company": "ことのはスタジオ",
+      "companyId": 11,
+      "department": "",
+      "logo": "",
+      "role": "シナリオライター",
+      "misc": "携帯：***-****-****\n  E-mail：teju@scenario-kotonoha.***\nWeb：scenario-kotonoha.***/works",
+      "backText": "サイコシスから独立。中村も",
+      "id": 6,
+      "objectId": 15,
+      "unlocks": [
+        67
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "上村 陽",
+      "year": 2015,
+      "company": "上村ゲーム企画室",
+      "companyId": 12,
+      "department": "",
+      "logo": "",
+      "role": "ゲーム企画・運営／シナリオ監修",
+      "misc": "携帯：070-****-****\n  E-mail：haru@uemura-planning.***\nWeb：uemura-planning.***",
+      "backText": "",
+      "id": 7,
+      "objectId": 16,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 7,
+      "personDisplayName": "中村 誠二",
+      "year": 2015,
+      "company": "中村音楽制作",
+      "companyId": 13,
+      "department": "",
+      "logo": "",
+      "role": "効果音制作・音響演出",
+      "misc": "携帯：***-****-****\n  E-mail：nakamura@nakamura-music.***\nWeb：nakamura-music.***/works",
+      "backText": "",
+      "id": 8,
+      "objectId": 17,
+      "unlocks": [
+        68
+      ]
+    },
+    {
+      "personId": 6,
+      "personDisplayName": "梁 太柱",
+      "year": 2014,
+      "company": "株式会社サイコシス",
+      "companyId": 9,
+      "department": "",
+      "logo": "",
+      "role": "シナリオ監修",
+      "misc": "〒***-****\n  東京都 *** 山吹ビル3階\n  TEL：03-****-****\n  E-mail：teju@psychosis.***\nWeb：psychosis.***\n  Google+：plus.google.com/*******************63",
+      "backText": "",
+      "id": 9,
+      "objectId": 18,
+      "unlocks": [
+        67
+      ]
+    },
+    {
+      "personId": 7,
+      "personDisplayName": "中村 誠二",
+      "year": 2014,
+      "company": "株式会社サイコシス",
+      "companyId": 9,
+      "department": "",
+      "logo": "",
+      "role": "サウンドディレクター",
+      "misc": "〒***-****\n  東京都 *** 山吹ビル3階\n  TEL：03-****-****\n  E-mail：nakamura@psychosis.***\n  携帯：070-****-****\nGoogle+：plus.google.com/*******************63",
+      "backText": "",
+      "id": 10,
+      "objectId": 19,
+      "unlocks": [
+        68
+      ]
+    },
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 2013,
+      "company": "株式会社タイガーテイル",
+      "companyId": 7,
+      "department": "",
+      "logo": "",
+      "role": "サウンドディレクター",
+      "misc": "〒***-****\n  東京都西東京市ひばりが丘 *** 葵ビル2階\n  TEL：042-4**-****\n  E-mail：endou@tigertail.***\nWeb：endou-music.***\n  mixiページ：タイガーテイル",
+      "backText": "",
+      "id": 11,
+      "objectId": 20,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 7,
+      "personDisplayName": "中村 誠二",
+      "year": 2013,
+      "company": "株式会社サイコシス",
+      "companyId": 9,
+      "department": "",
+      "logo": "",
+      "role": "音響演出・効果音制作",
+      "misc": "〒***-****\n  東京都西東京市柳沢 *** 新川アトリエ1階\n  TEL：042-4***-****\n  E-mail：nakamura@psychosis.***",
+      "backText": "",
+      "id": 12,
+      "objectId": 21,
+      "unlocks": [
+        68
+      ]
+    },
+    {
+      "personId": 6,
+      "personDisplayName": "梁 太柱",
+      "year": 2012,
+      "company": "株式会社サイコシス",
+      "companyId": 9,
+      "department": "",
+      "logo": "",
+      "role": "代表取締役",
+      "misc": "〒***-****\n  東京都西東京市柳沢 *** 新川アトリエ1階\n  TEL：042-4***-****\n  E-mail：teju@psychosis.***\n企画・シナリオ制作\n  Web：psychosis.***",
+      "backText": "12.7 設立祝いに花",
+      "id": 13,
+      "objectId": 22,
+      "unlocks": [
+        67
+      ]
+    },
+    {
+      "personId": 7,
+      "personDisplayName": "中村 誠二",
+      "year": 2011,
+      "company": "ハザードウェア",
+      "companyId": 8,
+      "department": "",
+      "logo": "",
+      "role": "サウンドディレクター",
+      "misc": "〒***-****\n  東京都西東京市南町 *** 榎本ビル2階\n  TEL：042-4**-**62\n  E-mail：nakamura@hazardware.***\n  運営：合同会社ハザードウェア",
+      "backText": "",
+      "id": 14,
+      "objectId": 23,
+      "unlocks": [
+        68
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 2011,
+      "company": "ハザードウェア",
+      "companyId": 8,
+      "department": "",
+      "logo": "",
+      "role": "アートディレクター／グラフィック",
+      "misc": "〒***-****\n  東京都西東京市南町 *** 榎本ビル2階\n  TEL：042-4**-**73\n  E-mail：yumi@hazardware.***\n  運営：合同会社ハザードウェア\nWeb：hazardware.***",
+      "backText": "11.1 ミナモトから独立",
+      "id": 15,
+      "objectId": 24,
+      "unlocks": [
+        69
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "上村 陽",
+      "year": 2010,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "ソーシャルゲーム事業部",
+      "logo": "",
+      "role": "統括プロデューサー",
+      "misc": "〒***-****\n  本社：東京都西東京市田無町 *** 榎本ビル3階\n  TEL：042-4**-**96\n  E-mail：haru@nippondigital.***\n  PHS：070-5***-**26",
+      "backText": "10.6『空と郵便』画集の見積もり",
+      "id": 16,
+      "objectId": 25,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 2010,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "制作部",
+      "logo": "",
+      "role": "背景美術・外注管理",
+      "misc": "〒***-****\n  本社：東京都西東京市田無町 *** 榎本ビル3階\n  TEL：042-4**-**87\n  E-mail：yumi@nippondigital.***\nWeb：nippondigital.***",
+      "backText": "",
+      "id": 17,
+      "objectId": 26,
+      "unlocks": [
+        69
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "moca",
+      "year": 2010,
+      "company": "有限会社西角デザイン室",
+      "companyId": 6,
+      "department": "",
+      "logo": "🐦",
+      "role": "イラストレーター",
+      "misc": "〒***-****\n  東京都西東京市柳沢 *** 新川アトリエ1階\n  TEL：050-****-**14\n  FAX：042-4**-**91\n  E-mail：y.nishikado@atelier-nishikado.***\nWeb：atelier-nishikado.***/portfolio",
+      "backText": "10.6 久々に話す",
+      "id": 18,
+      "objectId": 27,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 6,
+      "personDisplayName": "梁 太柱",
+      "year": 2010,
+      "company": "有限会社西角デザイン室",
+      "companyId": 6,
+      "department": "",
+      "logo": "🐦",
+      "role": "企画・シナリオ監修",
+      "misc": "〒***-****\n  東京都西東京市柳沢 *** 新川アトリエ1階\n  TEL：050-****-**14\n  FAX：042-4**-**35\n  E-mail：teju@atelier-nishikado.***",
+      "backText": "",
+      "id": 19,
+      "objectId": 28,
+      "unlocks": [
+        67
+      ]
+    },
+    {
+      "personId": 1,
+      "personDisplayName": "鈴木 美子",
+      "year": 2010,
+      "company": "株式会社遠藤音楽制作",
+      "companyId": 7,
+      "department": "開発部",
+      "logo": "",
+      "role": "オーディオプログラマー",
+      "misc": "〒***-****\n  東京都西東京市ひばりが丘 *** 葵ビル2階\n  TEL：042-4**-****\n  E-mail：yoshiko@endou-music.***\nSNS：Twitter @yoshiko_dev",
+      "backText": "",
+      "id": 20,
+      "objectId": 29,
+      "unlocks": [
+        62
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 2008,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "開発部",
+      "logo": "",
+      "role": "テクニカルディレクター",
+      "misc": "〒***-****\n  本社：東京都西東京市田無町 *** 榎本ビル3階\n  TEL：042-4**-**87\n  E-mail：miyamoto@nippondigital.***\n  PHS：070-5***-**74",
+      "backText": "",
+      "id": 21,
+      "objectId": 30,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 7,
+      "personDisplayName": "中村 誠二",
+      "year": 2006,
+      "company": "ハザードウェア",
+      "companyId": 8,
+      "department": "",
+      "logo": "",
+      "role": "効果音制作・音響演出",
+      "misc": "〒***-****\n  東京都西東京市南町 *** 榎本ビル2階\n  TEL：0424-**-**62\n  E-mail：nakamura@hazardware.***\n  運営：株式会社ミナモトインタラクティブ",
+      "backText": "",
+      "id": 22,
+      "objectId": 31,
+      "unlocks": [
+        68
+      ]
+    },
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 2005,
+      "company": "株式会社遠藤音楽制作",
+      "companyId": 7,
+      "department": "",
+      "logo": "",
+      "role": "代表取締役／作曲・編曲",
+      "misc": "〒***-****\n  東京都西東京市ひばりが丘 *** 葵ビル2階\n  TEL：0424-**-****\n  携帯：080-****-****\n  E-mail：endou@endou-music.***\nWeb：endou-music.***",
+      "backText": "",
+      "id": 23,
+      "objectId": 32,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 1,
+      "personDisplayName": "鈴木 美子",
+      "year": 2005,
+      "company": "株式会社学習教育社",
+      "companyId": null,
+      "department": "デジタル教材開発室",
+      "logo": "📘",
+      "role": "主任プログラマー",
+      "misc": "〒145-8502　東京都大田区*** ***　TEL：03-****-****　E-mail：yoshiko@gakkyou.***\n株式会社ミナモトインタラクティブより出向",
+      "backText": "",
+      "id": 24,
+      "objectId": 33,
+      "unlocks": [
+        62
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "moca",
+      "year": 2004,
+      "company": "有限会社西角デザイン室",
+      "companyId": 6,
+      "department": "",
+      "logo": "🐦",
+      "role": "イラストレーター",
+      "misc": "〒***-****\n  東京都杉並区 *** 榎本ビル1階\n  TEL：050-****-**14\n  E-mail：y.nishikado@atelier-nishikado.***\nWeb：atelier-nishikado.***/portfolio\n  mixi：mixi.jp/show_friend.pl?id=******74",
+      "backText": "",
+      "id": 25,
+      "objectId": 34,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 2003,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "",
+      "logo": "",
+      "role": "代表取締役",
+      "misc": "〒***-****\n  本社：東京都西東京市田無町 *** 若葉ビル4階\n  TEL：0424-**-**87\n  E-mail：miyamoto@nippondigital.***",
+      "backText": "03.6 社長就任祝いに花",
+      "id": 26,
+      "objectId": 35,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "上村 陽",
+      "year": 2003,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "制作部",
+      "logo": "",
+      "role": "プロデューサー",
+      "misc": "〒***-****\n  本社：東京都西東京市田無町 *** 若葉ビル4階\n  TEL：0424-**-**87\n  E-mail：haru@nippondigital.***",
+      "backText": "",
+      "id": 27,
+      "objectId": 36,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 2002,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "制作部",
+      "logo": "",
+      "role": "3D背景・テクスチャ制作",
+      "misc": "〒***-****\n  本社：東京都西東京市田無町 *** 若葉ビル4階\n  TEL：0424-**-**87\n  E-mail：yumi@nippondigital.***",
+      "backText": "",
+      "id": 28,
+      "objectId": 37,
+      "unlocks": [
+        69
+      ]
+    },
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 2000,
+      "company": "株式会社ニシギゲーム",
+      "companyId": 3,
+      "department": "遊技機開発部",
+      "logo": "",
+      "role": "サウンドディレクター",
+      "misc": "〒***-****\n  東京都田無市本町 ***\n  TEL：0424-**-****\n  携帯：***-****-****\n  E-mail：endou@nishigi.***",
+      "backText": "",
+      "id": 29,
+      "objectId": 38,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 2000,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "開発部",
+      "logo": "",
+      "role": "チーフプログラマー",
+      "misc": "〒***-****\n  本社：東京都田無市本町 *** 若葉ビル2階\n  TEL：0424-**-**87\n  E-mail：miyamoto@nippondigital.***\n  携帯：***-****-****\nWeb：http://nippondigital.***",
+      "backText": "",
+      "id": 30,
+      "objectId": 39,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "堀井 陽",
+      "year": 2000,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "制作部",
+      "logo": "",
+      "role": "プランナー／シナリオ",
+      "misc": "〒***-****\n  本社：東京都田無市本町 *** 若葉ビル2階\n  TEL：0424-**-**87\n  E-mail：haru@nippondigital.***\n  携帯：***-****-****",
+      "backText": "",
+      "id": 31,
+      "objectId": 40,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "西角 康",
+      "year": 2000,
+      "company": "有限会社西角デザイン室",
+      "companyId": 6,
+      "department": "",
+      "logo": "🐦",
+      "role": "イラストレーター",
+      "misc": "〒***-****\n  東京都杉並区 *** 榎本ビル1階\n  TEL：03-****-**28\n  E-mail：y.nishikado@atelier-nishikado.***\nWeb：atelier-nishikado.***/portfolio",
+      "backText": "",
+      "id": 32,
+      "objectId": 41,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 6,
+      "personDisplayName": "梁 太柱",
+      "year": 2000,
+      "company": "有限会社西角デザイン室",
+      "companyId": 6,
+      "department": "",
+      "logo": "🐦",
+      "role": "企画・シナリオ",
+      "misc": "〒***-****\n  東京都杉並区 *** 榎本ビル1階\n  TEL：03-****-**28\n  E-mail：teju@atelier-nishikado.***",
+      "backText": "00.4 設立祝いに花",
+      "id": 33,
+      "objectId": 42,
+      "unlocks": [
+        67
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 1999,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "制作部",
+      "logo": "",
+      "role": "2Dグラフィック",
+      "misc": "〒***-****\n  本社：東京都田無市本町 *** 若葉ビル2階\n  TEL：0424-**-**64\n  携帯：***-****-****",
+      "backText": "",
+      "id": 34,
+      "objectId": 43,
+      "unlocks": [
+        69
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 1998,
+      "company": "株式会社TKB",
+      "companyId": 2,
+      "department": "開発部",
+      "logo": "🐟",
+      "role": "主任プログラマー",
+      "misc": "〒***-****\n  東京都 ***\n  TEL：03-3***-**49\n  E-mail：miyamoto@tkb.***\n  携帯：***-***-****",
+      "backText": "",
+      "id": 35,
+      "objectId": 44,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "堀井 陽",
+      "year": 1998,
+      "company": "株式会社TKB",
+      "companyId": 2,
+      "department": "制作部",
+      "logo": "🐟",
+      "role": "ゲームプランナー",
+      "misc": "〒***-****\n  東京都 ***\n  TEL：03-3***-**38\n  E-mail：haru@tkb.***\n  携帯：***-***-****\nWeb：tkb.***",
+      "backText": "",
+      "id": 36,
+      "objectId": 45,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "西角 康",
+      "year": 1998,
+      "company": "有限会社ミカガミスタジオ",
+      "companyId": 4,
+      "department": "制作部",
+      "logo": "",
+      "role": "原画・グラフィック監修",
+      "misc": "〒***-****\n  東京都 ***\n  TEL：03-3***-****\n  携帯：***-***-****\n  E-mail：y.nishikado@mikagami.***\nWeb：mikagami.***",
+      "backText": "",
+      "id": 37,
+      "objectId": 46,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 1998,
+      "company": "株式会社日本デジタルカムパニー",
+      "companyId": 5,
+      "department": "制作部",
+      "logo": "",
+      "role": "作曲・編曲",
+      "misc": "〒***-****\n  本社：東京都田無市本町 *** 若葉ビル2階\n  TEL：0424-**-**64\n  携帯：***-***-****",
+      "backText": "",
+      "id": 38,
+      "objectId": 47,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 1,
+      "personDisplayName": "鈴木 美子",
+      "year": 1997,
+      "company": "株式会社ミナモトインタラクティブ",
+      "companyId": 1,
+      "department": "開発部",
+      "logo": "",
+      "role": "主任プログラマー",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-3***-****\nWeb：minamoto.***",
+      "backText": "",
+      "id": 39,
+      "objectId": 48,
+      "unlocks": [
+        62
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "堀井 陽",
+      "year": 1997,
+      "company": "株式会社TKB",
+      "companyId": 2,
+      "department": "制作部",
+      "logo": "🐟",
+      "role": "制作進行",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-3***-**49\n  携帯：***-***-****\n  E-mail：haru@tkb.***",
+      "backText": "",
+      "id": 40,
+      "objectId": 49,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 1997,
+      "company": "株式会社ニシギソフト",
+      "companyId": 3,
+      "department": "美術制作部",
+      "logo": "",
+      "role": "部長",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-3***-****",
+      "backText": "",
+      "id": 41,
+      "objectId": 50,
+      "unlocks": [
+        69
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "西角 康",
+      "year": 1997,
+      "company": "有限会社ミカガミスタジオ",
+      "companyId": 4,
+      "department": "制作部",
+      "logo": "",
+      "role": "キャラクター原画",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-3***-****",
+      "backText": "",
+      "id": 42,
+      "objectId": 51,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 1994,
+      "company": "株式会社ニシギソフト",
+      "companyId": 3,
+      "department": "",
+      "logo": "",
+      "role": "作曲・編曲",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-3***-****\n  NIFTY-Serve ID：********",
+      "backText": "",
+      "id": 43,
+      "objectId": 52,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 1992,
+      "company": "株式会社東海物産",
+      "companyId": 2,
+      "department": "開発部",
+      "logo": "🐟",
+      "role": "プログラマー",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-3***-**49\n  NIFTY-Serve ID：********",
+      "backText": "",
+      "id": 44,
+      "objectId": 53,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 1,
+      "personDisplayName": "鈴木 美子",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 45,
+      "objectId": 54,
+      "unlocks": [
+        62
+      ]
+    },
+    {
+      "personId": 2,
+      "personDisplayName": "遠藤 陽",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 46,
+      "objectId": 55,
+      "unlocks": [
+        63
+      ]
+    },
+    {
+      "personId": 3,
+      "personDisplayName": "西角 康",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 47,
+      "objectId": 56,
+      "unlocks": [
+        64
+      ]
+    },
+    {
+      "personId": 4,
+      "personDisplayName": "宮本 朗",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 48,
+      "objectId": 57,
+      "unlocks": [
+        65
+      ]
+    },
+    {
+      "personId": 5,
+      "personDisplayName": "堀井 陽",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 49,
+      "objectId": 58,
+      "unlocks": [
+        66
+      ]
+    },
+    {
+      "personId": 6,
+      "personDisplayName": "梁 太柱",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 50,
+      "objectId": 59,
+      "unlocks": [
+        67
+      ]
+    },
+    {
+      "personId": 7,
+      "personDisplayName": "中村 誠二",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 51,
+      "objectId": 60,
+      "unlocks": [
+        68
+      ]
+    },
+    {
+      "personId": 8,
+      "personDisplayName": "帝狩 有美",
+      "year": 1987,
+      "company": "株式会社ミナモトシステム",
+      "companyId": 1,
+      "department": "",
+      "logo": "",
+      "role": "",
+      "misc": "〒***\n  東京都 ***\n  TEL：03-***-****",
+      "backText": "",
+      "id": 52,
+      "objectId": 61,
+      "unlocks": [
+        69
+      ]
+    }
+  ],
+  "telephoneEvents": [
+    {
+      "id": 0,
+      "objectId": 62,
+      "personId": 1,
+      "unlocks": []
+    },
+    {
+      "id": 1,
+      "objectId": 63,
+      "personId": 2,
+      "unlocks": []
+    },
+    {
+      "id": 2,
+      "objectId": 64,
+      "personId": 3,
+      "unlocks": []
+    },
+    {
+      "id": 3,
+      "objectId": 65,
+      "personId": 4,
+      "unlocks": []
+    },
+    {
+      "id": 4,
+      "objectId": 66,
+      "personId": 5,
+      "unlocks": []
+    },
+    {
+      "id": 5,
+      "objectId": 67,
+      "personId": 6,
+      "unlocks": []
+    },
+    {
+      "id": 6,
+      "objectId": 68,
+      "personId": 7,
+      "unlocks": []
+    },
+    {
+      "id": 7,
+      "objectId": 69,
+      "personId": 8,
+      "unlocks": []
+    },
+    {
+      "id": 8,
+      "objectId": 70,
+      "personId": 9,
+      "unlocks": []
+    }
+  ],
+  "startingCards": []
+}

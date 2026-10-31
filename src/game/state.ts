@@ -1,4 +1,5 @@
-import { incomingConditions, type GameFlow } from './gameflow.ts'
+import { incomingConditions, startingCardIds, type GameFlow } from './gameflow.ts'
+import { LocalizedError } from '../i18n/messages.ts'
 
 export type GameState = {
   owned: number[]
@@ -9,7 +10,9 @@ export type GameState = {
   locked: number[]
 }
 
-export type Destination = { personId: number; slot: number } | 'bin'
+export type CardLocation = { personId: number; slot: number } | 'bin'
+// binIndex is the final zero-based position after removing the moving card.
+export type Destination = CardLocation | { binIndex: number }
 
 export function isComplete(flow: GameFlow, state: GameState): boolean {
   return flow.persons.every((person) => state.locked.includes(person.id))
@@ -25,9 +28,10 @@ function lockCompletedPages(flow: GameFlow, state: GameState): GameState {
 }
 
 export function createGame(flow: GameFlow): GameState {
+  const starting = startingCardIds(flow)
   return lockCompletedPages(flow, {
-    owned: [...flow.startingCards],
-    bin: [...flow.startingCards],
+    owned: [...starting],
+    bin: [...starting],
     pages: Object.fromEntries(flow.persons.map((person) => [person.id, Array<number | null>(8).fill(null)])),
     viewedBacks: [],
     called: [],
@@ -35,31 +39,37 @@ export function createGame(flow: GameFlow): GameState {
   })
 }
 
-export function cardLocation(state: GameState, cardId: number): Destination {
+export function cardLocation(state: GameState, cardId: number): CardLocation {
   for (const [personId, slots] of Object.entries(state.pages)) {
     const slot = slots.indexOf(cardId)
     if (slot !== -1) return { personId: Number(personId), slot }
   }
   if (state.bin.includes(cardId)) return 'bin'
-  throw new Error(`Card #${cardId} is not in your collection.`)
+  throw new LocalizedError('errors.cardNotOwned', { id: cardId })
 }
 
 export function moveCard(flow: GameFlow, state: GameState, cardId: number, destination: Destination): GameState {
   const source = cardLocation(state, cardId)
   if (source !== 'bin' && state.locked.includes(source.personId)) {
-    throw new Error('Completed pages are locked. Their cards can still be inspected.')
+    throw new LocalizedError('errors.completedPageLocked')
   }
-  if (destination !== 'bin') {
-    if (!state.pages[destination.personId] || !Number.isInteger(destination.slot) ||
-      destination.slot < 0 || destination.slot >= 8) throw new Error('Choose a valid binder slot.')
-    if (state.locked.includes(destination.personId)) throw new Error('That page is already locked.')
-  }
-  if (source === 'bin' && destination === 'bin') return state
-  const pages = Object.fromEntries(Object.entries(state.pages).map(([id, slots]) => [id, [...slots]]))
+  const toBin = destination === 'bin' || 'binIndex' in destination
   const bin = state.bin.filter((id) => id !== cardId)
+  const binIndex = toBin ? destination === 'bin' ? bin.length : destination.binIndex : -1
+  if (toBin) {
+    if (!Number.isSafeInteger(binIndex) || binIndex < 0 || binIndex > bin.length) {
+      throw new LocalizedError('errors.chooseBinSlot')
+    }
+    if (source === 'bin' && state.bin.indexOf(cardId) === binIndex) return state
+  } else {
+    if (!state.pages[destination.personId] || !Number.isInteger(destination.slot) ||
+      destination.slot < 0 || destination.slot >= 8) throw new LocalizedError('errors.chooseSlot')
+    if (state.locked.includes(destination.personId)) throw new LocalizedError('errors.pageLocked')
+  }
+  const pages = Object.fromEntries(Object.entries(state.pages).map(([id, slots]) => [id, [...slots]]))
   if (source !== 'bin') pages[source.personId][source.slot] = null
-  if (destination === 'bin') {
-    bin.push(cardId)
+  if (toBin) {
+    bin.splice(binIndex, 0, cardId)
   } else {
     const displaced = pages[destination.personId][destination.slot]
     pages[destination.personId][destination.slot] = cardId
@@ -73,8 +83,8 @@ export function moveCard(flow: GameFlow, state: GameState, cardId: number, desti
 
 function grantUnlocked(flow: GameFlow, state: GameState): GameState {
   const satisfied = new Set([
-    ...state.viewedBacks,
-    ...flow.telephoneEvents.filter((event) => state.called.includes(event.personId)).map((event) => event.id),
+    ...flow.namecards.filter((card) => state.viewedBacks.includes(card.id)).map((card) => card.objectId),
+    ...flow.telephoneEvents.filter((event) => state.called.includes(event.personId)).map((event) => event.objectId),
   ])
   const added = flow.namecards.filter((card) => {
     const conditions = incomingConditions(flow, card.id)
@@ -86,14 +96,14 @@ function grantUnlocked(flow: GameFlow, state: GameState): GameState {
 
 export function viewBack(flow: GameFlow, state: GameState, cardId: number): GameState {
   const card = flow.namecards.find((card) => card.id === cardId)
-  if (!card || !state.owned.includes(cardId)) throw new Error('You can only view cards you own.')
+  if (!card || !state.owned.includes(cardId)) throw new LocalizedError('errors.viewOwnedCard')
   if (!card.backText.trim() || state.viewedBacks.includes(cardId)) return state
   return grantUnlocked(flow, { ...state, viewedBacks: [...state.viewedBacks, cardId] })
 }
 
 export function callPerson(flow: GameFlow, state: GameState, personId: number): GameState {
-  if (!state.locked.includes(personId)) throw new Error("Complete this person's page before calling.")
-  if (!flow.telephoneEvents.some((event) => event.personId === personId)) throw new Error('This person has no telephone event.')
+  if (!state.locked.includes(personId)) throw new LocalizedError('errors.completeBeforeCalling')
+  if (!flow.telephoneEvents.some((event) => event.personId === personId)) throw new LocalizedError('errors.noTelephone')
   if (state.called.includes(personId)) return state
   return grantUnlocked(flow, { ...state, called: [...state.called, personId] })
 }

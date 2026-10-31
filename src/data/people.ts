@@ -84,6 +84,7 @@ export const people: Person[] = histories.map((person) => ({
     ...card,
     personId: person.id,
     personDisplayName: person.name,
+    misc: '',
     backText: '',
     backViewed: false,
   })),

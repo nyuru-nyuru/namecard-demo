@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { emptyFlow, isAutomaticRelation, parseGameFlow, readFlow, unreachableEventIds, validateFlow } from '../src/game/gameflow.ts'
+import { emptyFlow, flowValidationIssues, isAutomaticRelation, parseGameFlow, readFlow, unreachableEventIds, validateFlow } from '../src/game/gameflow.ts'
 import {
   addCard,
   addPerson,
@@ -20,21 +20,26 @@ import {
 function withCards(count: number) {
   let flow = addPerson(emptyFlow(), 'Ada')
   for (let index = 0; index < count; index++) {
-    const id = flow.nextId
+    const id = flow.nextNamecardId
     flow = addCard(flow, 0)
     flow = updateCard(flow, id, { company: 'Archive', role: 'Designer', year: 2000 + index })
   }
   return flow
 }
 
-test('all entity types share IDs from zero; empty people get a telephone', () => {
+test('entity types count IDs independently from zero and share global objectIds; empty people get a telephone', () => {
   const first = addPerson(emptyFlow(), 'Ada')
   assert.equal(first.persons[0].id, 0)
   assert.deepEqual(first.persons[0].namecards, [])
-  assert.deepEqual(first.telephoneEvents, [{ id: 1, personId: 0, unlocks: [] }])
+  assert.equal(first.persons[0].objectId, 0)
+  assert.deepEqual(first.telephoneEvents, [{ id: 0, objectId: 1, personId: 0, unlocks: [] }])
   const card = addCard(first, 0)
-  assert.equal(card.namecards[0].id, 2)
+  assert.equal(card.namecards[0].id, 0)
+  assert.equal(card.namecards[0].objectId, 2)
   assert.equal(card.nextId, 3)
+  assert.equal(card.nextPersonId, 1)
+  assert.equal(card.nextNamecardId, 1)
+  assert.equal(card.nextTelephoneEventId, 1)
   assert.deepEqual(card.namecards[0].unlocks, [1])
   assert.deepEqual(validateFlow(first), [])
   assert.equal(renamePerson(first, 0, 'Grace').persons[0].name, 'Grace')
@@ -43,75 +48,76 @@ test('all entity types share IDs from zero; empty people get a telephone', () =>
 
 test('answer keys sort by year then ID and every field can be updated', () => {
   const original = withCards(3)
-  let flow = updateCard(original, 4, {
-    year: 1990, personDisplayName: 'A. Example', company: 'Example', role: 'Lead', backText: 'A clue',
+  let flow = updateCard(original, 2, {
+    year: 1990, personDisplayName: 'A. Example', company: 'Example', role: 'Lead', misc: 'Front details', backText: 'A clue',
   })
-  flow = updateCard(flow, 3, { year: 1990 })
-  assert.deepEqual(flow.persons[0].namecards, [3, 4, 2])
+  flow = updateCard(flow, 1, { year: 1990 })
+  assert.deepEqual(flow.persons[0].namecards, [1, 2, 0])
   assert.equal(flow.namecards[2].backText, 'A clue')
   assert.equal(flow.namecards[2].personDisplayName, 'A. Example')
   assert.equal(flow.namecards[2].company, 'Example')
   assert.equal(flow.namecards[2].role, 'Lead')
-  assert.deepEqual(original.persons[0].namecards, [2, 3, 4])
-  assert.throws(() => updateCard(flow, 4, { year: 1.5 }), /whole number/)
+  assert.equal(flow.namecards[2].misc, 'Front details')
+  assert.deepEqual(original.persons[0].namecards, [0, 1, 2])
+  assert.throws(() => updateCard(flow, 2, { year: 1.5 }), /whole number/)
 })
 
 test('assignment enforces capacity, allows unassigned drafts, and derives telephone edges', () => {
   let flow = withCards(8)
   assert.throws(() => addCard(flow, 0), /eight cards/)
   flow = addCard(flow)
-  const extraId = flow.nextId - 1
+  const extraId = flow.nextNamecardId - 1
   assert.equal(flow.namecards.at(-1)?.personId, null)
   assert.throws(() => updateCard(flow, extraId, { personId: 0 }), /eight cards/)
-  flow = updateCard(flow, 2, { personId: null })
+  flow = updateCard(flow, 0, { personId: null })
   flow = updateCard(flow, extraId, { personId: 0 })
   assert.equal(flow.persons[0].namecards.length, 8)
-  assert.deepEqual(flow.namecards.find((card) => card.id === 2)?.unlocks, [])
+  assert.deepEqual(flow.namecards.find((card) => card.id === 0)?.unlocks, [])
   assert.deepEqual(flow.namecards.find((card) => card.id === extraId)?.unlocks, [1])
-  assert.throws(() => updateCard(flow, 2, { personId: 999 }), /existing person/)
+  assert.throws(() => updateCard(flow, 0, { personId: 999 }), /existing person/)
   flow = addPerson(flow, 'Grace')
   const graceId = flow.persons[1].id
   flow = updateCard(flow, extraId, { personId: graceId })
   assert.deepEqual(flow.persons[1].namecards, [extraId])
-  assert.deepEqual(flow.namecards.find((card) => card.id === extraId)?.unlocks, [graceId + 1])
+  assert.deepEqual(flow.namecards.find((card) => card.id === extraId)?.unlocks, [flow.telephoneEvents[1].objectId])
 })
 
 test('reassignment preserves manual edges but replaces automatic telephone relations', () => {
   let flow = addPerson(withCards(2), 'Grace')
   flow = setUnlock(flow, 2, 3, true)
-  flow = updateCard(flow, 2, { personId: 4 })
+  flow = updateCard(flow, 0, { personId: 1 })
   assert.deepEqual(flow.namecards[0].unlocks, [3, 5])
-  assert.deepEqual(flow.persons[0].namecards, [3])
-  assert.deepEqual(flow.persons[1].namecards, [2])
+  assert.deepEqual(flow.persons[0].namecards, [1])
+  assert.deepEqual(flow.persons[1].namecards, [0])
 })
 
 test('deleting a card removes every reference and does not reuse its ID', () => {
   let flow = withCards(2)
-  flow = setStartingCard(flow, 3, true)
+  flow = setStartingCard(flow, 1, true)
   flow = setUnlock(flow, 2, 3, true)
   flow = setUnlock(flow, 1, 3, true)
-  flow = removeCard(flow, 3)
+  flow = removeCard(flow, 1)
   assert.deepEqual(flow.startingCards, [])
-  assert.deepEqual(flow.persons[0].namecards, [2])
+  assert.deepEqual(flow.persons[0].namecards, [0])
   assert.deepEqual(flow.namecards[0].unlocks, [1])
   assert.deepEqual(flow.telephoneEvents[0].unlocks, [])
   assert.equal(flow.nextId, 4)
-  assert.equal(addCard(flow).namecards.at(-1)?.id, 4)
+  assert.equal(addCard(flow).namecards.at(-1)?.id, 2)
 })
 
 test('removing a person preserves all cards as drafts and removes their phone references', () => {
   let flow = withCards(2)
   flow = setUnlock(flow, 2, 3, true)
   flow = setUnlock(flow, 1, 3, true)
-  flow = setStartingCard(flow, 2, true)
+  flow = setStartingCard(flow, 0, true)
   flow = removePerson(flow, 0)
   assert.equal(flow.persons.length, 0)
   assert.equal(flow.telephoneEvents.length, 0)
   assert.equal(flow.namecards.length, 2)
   assert.ok(flow.namecards.every((card) => card.personId === null))
   assert.deepEqual(flow.namecards[0].unlocks, [3])
-  assert.deepEqual(flow.startingCards, [2])
-  assert.equal(addPerson(flow).persons[0].id, 4)
+  assert.deepEqual(flow.startingCards, [0])
+  assert.equal(addPerson(flow).persons[0].id, 1)
 })
 
 test('manual relations are unique and editable; automatic relations are read-only', () => {
@@ -131,13 +137,73 @@ test('manual relations are unique and editable; automatic relations are read-onl
 })
 
 test('starting cards are unique and are preserved through draft serialization', () => {
-  let flow = setStartingCard(withCards(2), 2, true)
-  flow = setStartingCard(flow, 2, true)
-  assert.deepEqual(flow.startingCards, [2])
+  let flow = setStartingCard(withCards(2), 0, true)
+  flow = setStartingCard(flow, 0, true)
+  assert.deepEqual(flow.startingCards, [0])
   assert.deepEqual(readEditorDraft(JSON.parse(JSON.stringify(flow))), flow)
-  flow = setStartingCard(flow, 2, false)
+  flow = setStartingCard(flow, 0, false)
   assert.deepEqual(flow.startingCards, [])
   assert.throws(() => setStartingCard(flow, 99, true), /existing cards/)
+})
+
+test('all-unlocked drafts need no starters or manual relations and retain automatic links when edited', () => {
+  const flow = { ...withCards(2), mode: 'all-unlocked' as const }
+  assert.deepEqual(validateFlow(flow), [])
+  assert.deepEqual(unreachableEventIds(flow), [])
+  assert.deepEqual(parseGameFlow(JSON.parse(JSON.stringify(flow))), flow)
+  const edited = updateCard(addCard(flow, 0), 2, { company: 'Archive', role: 'Designer', year: 2002 })
+  assert.equal(edited.mode, 'all-unlocked')
+  assert.deepEqual(edited.startingCards, [])
+  assert.deepEqual(edited.namecards[2].unlocks, [edited.telephoneEvents[0].objectId])
+  assert.deepEqual(validateFlow(edited), [])
+  assert.deepEqual(unreachableEventIds(edited), [])
+})
+
+test('switching to all-unlocked preserves authored starters and relations through draft serialization', () => {
+  let flow = setStartingCard(withCards(2), 0, true)
+  flow = setUnlock(setUnlock(flow, 2, 3, true), 1, 3, true)
+  const unlocked = { ...flow, mode: 'all-unlocked' as const }
+  assert.deepEqual(validateFlow(unlocked), [])
+  assert.deepEqual(unreachableEventIds(unlocked), [])
+  const restored = readEditorDraft(JSON.parse(JSON.stringify(unlocked)))
+  assert.deepEqual(restored, unlocked)
+  const progression = { ...restored, mode: 'progression' as const }
+  assert.deepEqual(progression.startingCards, flow.startingCards)
+  assert.deepEqual(progression.namecards, flow.namecards)
+  assert.deepEqual(progression.telephoneEvents, flow.telephoneEvents)
+  assert.ok(validateFlow(progression).some((error) => error.includes('no information')))
+  assert.ok(unreachableEventIds(progression).length > 0)
+})
+
+test('validation issues identify card domain IDs and clear when the card is corrected', () => {
+  const initial = { ...withCards(2), mode: 'all-unlocked' as const }
+  const invalid = updateCard(initial, 1, { company: '', year: 0, role: '' })
+  assert.notEqual(invalid.namecards[1].id, invalid.namecards[1].objectId)
+  assert.deepEqual(flowValidationIssues(invalid).map(({ key, cardIds }) => ({ key, cardIds })), [
+    { key: 'validation.cardFields', cardIds: [1] },
+    { key: 'validation.cardYear', cardIds: [1] },
+  ])
+  const corrected = updateCard(invalid, 1, { company: 'Archive', year: 2001 })
+  assert.deepEqual(flowValidationIssues(corrected), [])
+  assert.deepEqual(validateFlow(corrected), [])
+  const position = {
+    ...corrected,
+    eventPositions: { [corrected.namecards[1].objectId]: { x: NaN, y: 0 } },
+  }
+  assert.deepEqual(flowValidationIssues(position).map(({ key, cardIds }) => ({ key, cardIds })), [
+    { key: 'validation.position', cardIds: [1] },
+  ])
+})
+
+test('aggregate deadlock errors identify every listed card for highlighting', () => {
+  let flow = setStartingCard(withCards(3), 0, true)
+  flow = setUnlock(setUnlock(flow, 1, 3, true), 1, 4, true)
+  const issues = flowValidationIssues(flow)
+  assert.equal(issues.length, 1)
+  assert.equal(issues[0].key, 'validation.unobtainable')
+  assert.deepEqual(issues[0].cardIds, [1, 2])
+  assert.equal(issues[0].values?.cards, '#1, #2')
+  assert.deepEqual(flowValidationIssues(setStartingCard(setStartingCard(flow, 1, true), 2, true)), [])
 })
 
 test('dangling imported relations and invalid telephone targets can be removed', () => {
@@ -159,8 +225,9 @@ test('draft import accepts incomplete fields and reconstructs derived keys and m
   let flow = addCard(addPerson(emptyFlow()), 0)
   flow = { ...flow, persons: [{ ...flow.persons[0], namecards: [] }], telephoneEvents: [] }
   const imported = readEditorDraft(flow)
-  assert.deepEqual(imported.persons[0].namecards, [2])
-  assert.equal(imported.telephoneEvents[0].id, 3)
+  assert.deepEqual(imported.persons[0].namecards, [0])
+  assert.equal(imported.telephoneEvents[0].id, 1)
+  assert.equal(imported.telephoneEvents[0].objectId, 3)
   assert.equal(imported.nextId, 4)
   // The missing event's old ID is a dangling draft edge, not silently discarded.
   assert.deepEqual(imported.namecards[0].unlocks, [1, 3])
@@ -174,9 +241,12 @@ test('corrupted drafts and ambiguous IDs are rejected without modifying the inpu
   const flow = withCards(1)
   assert.throws(() => readEditorDraft({ ...flow, nextId: 2 }), /nextId/)
   assert.throws(() => readEditorDraft({ ...flow, nextId: -1 }), /nextId/)
-  assert.throws(() => readEditorDraft({ ...flow, persons: [{ ...flow.persons[0], id: 1 }] }), /unique/)
+  assert.throws(() => readEditorDraft({ ...flow, persons: [{ ...flow.persons[0], objectId: 1 }] }), /unique/)
+  assert.throws(() => readEditorDraft({ ...flow, nextNamecardId: 0 }), /nextNamecardId/)
+  assert.throws(() => readEditorDraft({ ...flow, nextPersonId: -1 }), /nextPersonId/)
   assert.throws(() => readEditorDraft({
-    ...flow, nextId: 5, telephoneEvents: [...flow.telephoneEvents, { id: 4, personId: 0, unlocks: [] }],
+    ...flow, nextId: 5, nextTelephoneEventId: 2,
+    telephoneEvents: [...flow.telephoneEvents, { id: 1, objectId: 4, personId: 0, unlocks: [] }],
   }), /multiple telephone/)
   assert.throws(() => readEditorDraft({
     ...flow, telephoneEvents: [{ ...flow.telephoneEvents[0], personId: 90 }],
@@ -187,9 +257,9 @@ test('corrupted drafts and ambiguous IDs are rejected without modifying the inpu
 
 test('validation blocks AND deadlocks and accepts all reachable card conditions', () => {
   let flow = withCards(3)
-  flow = updateCard(flow, 2, { backText: 'First clue' })
-  flow = updateCard(flow, 3, { backText: 'Second clue' })
-  flow = setStartingCard(flow, 2, true)
+  flow = updateCard(flow, 0, { backText: 'First clue' })
+  flow = updateCard(flow, 1, { backText: 'Second clue' })
+  flow = setStartingCard(flow, 0, true)
   flow = setUnlock(flow, 2, 3, true)
   flow = setUnlock(flow, 2, 4, true)
   flow = setUnlock(flow, 3, 4, true)
@@ -201,10 +271,10 @@ test('validation blocks AND deadlocks and accepts all reachable card conditions'
 
 test('blank back card clues cannot export; completed-page phone unlocks need no back text', () => {
   let flow = withCards(1)
-  flow = setStartingCard(flow, 2, true)
+  flow = setStartingCard(flow, 0, true)
   flow = addPerson(flow, 'Grace')
-  flow = addCard(flow, 3)
-  flow = updateCard(flow, 5, { company: 'Office', role: 'Director' })
+  flow = addCard(flow, 1)
+  flow = updateCard(flow, 1, { company: 'Office', role: 'Director' })
   flow = setUnlock(flow, 1, 5, true)
   assert.deepEqual(validateFlow(flow), [])
   flow = setUnlock(flow, 2, 5, true)
@@ -213,36 +283,37 @@ test('blank back card clues cannot export; completed-page phone unlocks need no 
 
 test('deleting the last card removes its telephone and all attached edges but keeps its person', () => {
   let flow = addPerson(withCards(1), 'Grace')
-  flow = addCard(flow, 3)
-  flow = setStartingCard(flow, 2, true)
+  flow = addCard(flow, 1)
+  flow = setStartingCard(flow, 0, true)
   flow = setUnlock(flow, 1, 5, true)
   flow = setUnlock(flow, 5, 2, true)
   flow = setEventPositions(flow, { 1: { x: 300, y: 0 }, 2: { x: 0, y: 0 }, 5: { x: 0, y: 200 } })
-  const removed = removeCard(flow, 2)
-  assert.deepEqual(removed.persons[0], { id: 0, name: 'Ada', namecards: [] })
+  const removed = removeCard(flow, 0)
+  assert.deepEqual(removed.persons[0], { id: 0, objectId: 0, name: 'Ada', namecards: [] })
   assert.ok(!removed.telephoneEvents.some((event) => event.personId === 0))
   assert.deepEqual(removed.namecards[0].unlocks, [4])
   assert.deepEqual(removed.startingCards, [])
   assert.deepEqual(removed.eventPositions, { 5: { x: 0, y: 200 } })
   assert.deepEqual(readEditorDraft(JSON.parse(JSON.stringify(removed))), removed)
   const recreated = addCard(removed, 0)
-  assert.equal(recreated.namecards.at(-1)?.id, 6)
-  assert.deepEqual(recreated.telephoneEvents.find((event) => event.personId === 0), { id: 7, personId: 0, unlocks: [] })
+  assert.equal(recreated.namecards.at(-1)?.id, 2)
+  assert.equal(recreated.namecards.at(-1)?.objectId, 6)
+  assert.deepEqual(recreated.telephoneEvents.find((event) => event.personId === 0), { id: 2, objectId: 7, personId: 0, unlocks: [] })
   assert.deepEqual(recreated.namecards.at(-1)?.unlocks, [7])
   assert.equal(recreated.nextId, 8)
-  assert.ok(flow.telephoneEvents.some((event) => event.id === 1))
-  assert.throws(() => removeCard(removed, 2), /does not exist/)
+  assert.ok(flow.telephoneEvents.some((event) => event.objectId === 1))
+  assert.throws(() => removeCard(removed, 0), /does not exist/)
 })
 
 test('assigning a card to an empty person recreates a missing telephone without reusing IDs', () => {
-  let flow = removeCard(withCards(1), 2)
+  let flow = removeCard(withCards(1), 0)
   flow = addCard(flow)
-  const id = flow.nextId - 1
+  const id = flow.nextNamecardId - 1
   flow = updateCard(flow, id, { personId: 0 })
-  assert.deepEqual(flow.telephoneEvents, [{ id: 4, personId: 0, unlocks: [] }])
+  assert.deepEqual(flow.telephoneEvents, [{ id: 1, objectId: 4, personId: 0, unlocks: [] }])
   assert.deepEqual(flow.namecards[0].unlocks, [4])
   const missingPhone = { ...withCards(1), telephoneEvents: [] }
-  assert.deepEqual(updateCard(missingPhone, 2, { personId: null }).telephoneEvents, [])
+  assert.deepEqual(updateCard(missingPhone, 0, { personId: null }).telephoneEvents, [])
 })
 
 test('deleting a telephone node removes its person, preserves cards as drafts, and cleans every reference', () => {
@@ -279,12 +350,12 @@ test('graph deletion cannot remove automatic edges on their own but allows delet
   flow = removeGraphSelection(flow, [], [{ sourceId: 2, targetId: 3 }])
   assert.deepEqual(flow.namecards[0].unlocks, [1])
   flow = removeGraphSelection(flow, [2], [{ sourceId: 2, targetId: 1 }])
-  assert.deepEqual(flow.persons[0].namecards, [3])
-  assert.deepEqual(flow.telephoneEvents, [{ id: 1, personId: 0, unlocks: [] }])
+  assert.deepEqual(flow.persons[0].namecards, [1])
+  assert.deepEqual(flow.telephoneEvents, [{ id: 0, objectId: 1, personId: 0, unlocks: [] }])
 })
 
 test('flowchart positions survive draft and game export/import and accept fractional or negative coordinates', () => {
-  const flow = setEventPositions(setStartingCard(withCards(1), 2, true), {
+  const flow = setEventPositions(setStartingCard(withCards(1), 0, true), {
     1: { x: 400.25, y: -30 },
     2: { x: -120, y: 80.5 },
   })
@@ -299,7 +370,7 @@ test('flowchart positions survive draft and game export/import and accept fracti
 })
 
 test('default flowchart layout orders career cards before telephones and includes unassigned drafts', () => {
-  let flow = updateCard(withCards(2), 3, { year: 1990 })
+  let flow = updateCard(withCards(2), 1, { year: 1990 })
   flow = addCard(flow)
   const positions = defaultEventPositions(flow)
   assert.deepEqual(Object.keys(positions).map(Number).sort(), [1, 2, 3, 4])
@@ -311,9 +382,9 @@ test('default flowchart layout orders career cards before telephones and include
 
 test('unreachable warnings include blocked telephones and respect AND rather than simple graph paths', () => {
   let flow = withCards(3)
-  flow = setStartingCard(flow, 2, true)
-  flow = updateCard(flow, 2, { backText: 'First clue' })
-  flow = updateCard(flow, 3, { backText: 'Second clue' })
+  flow = setStartingCard(flow, 0, true)
+  flow = updateCard(flow, 0, { backText: 'First clue' })
+  flow = updateCard(flow, 1, { backText: 'Second clue' })
   flow = setUnlock(flow, 2, 3, true)
   flow = setUnlock(flow, 2, 4, true)
   flow = setUnlock(flow, 3, 4, true)
@@ -327,12 +398,12 @@ test('unreachable warnings include blocked telephones and respect AND rather tha
 })
 
 test('empty people can remain without telephones after automatic cleanup', () => {
-  const flow = removeCard(withCards(1), 2)
+  const flow = removeCard(withCards(1), 0)
   assert.deepEqual(validateFlow(flow), [])
   assert.deepEqual(parseGameFlow(JSON.parse(JSON.stringify(flow))), flow)
   assert.deepEqual(readEditorDraft(flow), flow)
   const restored = addTelephone(flow, 0)
-  assert.deepEqual(restored.telephoneEvents, [{ id: 3, personId: 0, unlocks: [] }])
+  assert.deepEqual(restored.telephoneEvents, [{ id: 1, objectId: 3, personId: 0, unlocks: [] }])
   assert.deepEqual(validateFlow(restored), [])
   assert.throws(() => addTelephone(restored, 0), /already has/)
   assert.throws(() => addTelephone(flow, 900), /existing person/)

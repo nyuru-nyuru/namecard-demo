@@ -1,3 +1,5 @@
+import { english } from '../i18n/messages.ts'
+
 export type GridOrder = 'row-wise' | 'column-wise'
 export type GridDirection = 'ltr' | 'rtl'
 
@@ -12,7 +14,7 @@ export function getGridPositions(
   { columns, order, direction }: GridLayout,
 ) {
   if (!Number.isSafeInteger(columns) || columns < 1) {
-    throw new RangeError('columns must be a positive safe integer')
+    throw new RangeError(english('demo.invalidColumnCount'))
   }
 
   const rows = Math.ceil(itemCount / columns)

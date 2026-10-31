@@ -1,29 +1,112 @@
 import { appUrl } from '../urls.ts'
-import { parseGameFlow, type GameFlow } from './gameflow.ts'
+import { english, errorMessage, LocalizedError, msg, type Message } from '../i18n/messages.ts'
+import { parseGameFlow, readFlow, type GameFlow } from './gameflow.ts'
 import { getFlowchart, type FlowchartStorage, type FlowchartSummary } from './flowcharts.ts'
+import { getGoogleSheetCsv, type GoogleSheetCsvOptions } from '../network/googleSheets.ts'
+import { parseMeisiCsv } from './meisi.ts'
 
-export type LoadedGameFlow = { flow: GameFlow; source: string; flowchart?: FlowchartSummary }
+export type LoadedGameFlow = {
+  flow: GameFlow
+  source: string
+  sourceMessage?: Message
+  flowchart?: FlowchartSummary
+  warning?: Message
+}
 
-export async function loadGameFlow(flowchartId?: string | null, storage?: FlowchartStorage): Promise<LoadedGameFlow> {
+type SampleDataset = {
+  id: string
+  titleKey: Message['key']
+  titleValues?: Message['values']
+} & ({ filename: string } | { loaded: LoadedGameFlow })
+
+export const DEFAULT_SAMPLE_DATASET = {
+  id: 'meisi', titleKey: 'samples.meisi', filename: 'sample_meisi_gameflow.json',
+} as const
+
+const sampleDatasets: SampleDataset[] = [
+  DEFAULT_SAMPLE_DATASET,
+  { id: 'careers', titleKey: 'samples.careers', filename: 'sample_gameflow.json' },
+]
+
+export const SAMPLE_DATASETS: readonly SampleDataset[] = sampleDatasets
+
+export async function loadSampleDataset(id: string, signal?: AbortSignal): Promise<LoadedGameFlow> {
+  const dataset = SAMPLE_DATASETS.find((dataset) => dataset.id === id)
+  if (!dataset) throw new LocalizedError('errors.unknownSample', { id })
+  if ('loaded' in dataset) {
+    signal?.throwIfAborted()
+    return { ...dataset.loaded, flow: readFlow(dataset.loaded.flow) }
+  }
+  const response = await fetch(appUrl(dataset.filename), { signal })
+  if (!response.ok) throw new LocalizedError('errors.loadFile', { filename: dataset.filename, status: response.status })
+  return { flow: readFlow(await response.json()), source: dataset.filename }
+}
+
+export function loadFromSpreadsheet(options: GoogleSheetCsvOptions): Promise<string> {
+  return getGoogleSheetCsv(options)
+}
+
+export async function loadGameFlow(
+  flowchartId?: string | null,
+  storage?: FlowchartStorage,
+  spreadsheet?: GoogleSheetCsvOptions,
+): Promise<LoadedGameFlow> {
   if (flowchartId !== undefined && flowchartId !== null) {
     const flowchart = getFlowchart(flowchartId, storage)
     return {
       flow: parseGameFlow(flowchart.gameflow),
-      source: `${flowchart.title} (flowchart ${flowchart.id})`,
+      source: english('game.source.saved', { title: flowchart.title, id: flowchart.id }),
+      sourceMessage: msg('game.source.saved', { title: flowchart.title, id: flowchart.id }),
       flowchart: { id: flowchart.id, title: flowchart.title },
     }
   }
-  const response = await fetch(appUrl('gameflow.json'))
+  if (!spreadsheet) return loadLocalGameFlow()
+  spreadsheet.signal?.throwIfAborted()
+  try {
+    const flow = parseGameFlow(parseMeisiCsv(await loadFromSpreadsheet(spreadsheet)))
+    spreadsheet.signal?.throwIfAborted()
+    const sourceMessage = msg('game.source.googleSheets', { range: spreadsheet.range })
+    const loaded = { flow, source: english(sourceMessage.key, sourceMessage.values), sourceMessage }
+    const dataset: SampleDataset = {
+      id: `google-sheets:${JSON.stringify([spreadsheet.spreadsheetId.trim(), spreadsheet.range.trim()])}`,
+      titleKey: sourceMessage.key,
+      titleValues: sourceMessage.values,
+      loaded: { ...loaded, flow: readFlow(flow) },
+    }
+    const existingIndex = sampleDatasets.findIndex((sample) => sample.id === dataset.id)
+    if (existingIndex !== -1) sampleDatasets.splice(existingIndex, 1)
+    sampleDatasets.unshift(dataset)
+    return loaded
+  } catch (sheetError) {
+    if (spreadsheet.signal?.aborted) throw sheetError
+    try {
+      const local = await loadLocalGameFlow(spreadsheet.signal)
+      return {
+        ...local,
+        warning: msg('game.errors.googleSheetsFallback', { error: errorMessage(sheetError) }),
+      }
+    } catch (localError) {
+      if (spreadsheet.signal?.aborted) throw localError
+      throw new LocalizedError('errors.googleSheetsAndLocalFailed', {
+        sheetError: errorMessage(sheetError),
+        localError: errorMessage(localError),
+      })
+    }
+  }
+}
+
+async function loadLocalGameFlow(signal?: AbortSignal): Promise<LoadedGameFlow> {
+  const response = await fetch(appUrl('gameflow.json'), { signal })
   // Vite's SPA fallback returns index.html for an absent public file.
   const missing = response.status === 404 ||
     (response.ok && response.headers.get('content-type')?.includes('text/html'))
   if (!missing) {
-    if (!response.ok) throw new Error(`Could not load gameflow.json: HTTP ${response.status}`)
+    if (!response.ok) throw new LocalizedError('errors.loadFile', { filename: 'gameflow.json', status: response.status })
     return { flow: parseGameFlow(await response.json()), source: 'gameflow.json' }
   }
-  const sample = await fetch(appUrl('sample_gameflow.json'))
-  if (!sample.ok) throw new Error(`Could not load sample_gameflow.json: HTTP ${sample.status}`)
-  return { flow: parseGameFlow(await sample.json()), source: 'sample_gameflow.json (no gameflow.json found)' }
+  const sample = await loadSampleDataset(DEFAULT_SAMPLE_DATASET.id, signal)
+  const sourceMessage = msg('game.source.sample', { filename: DEFAULT_SAMPLE_DATASET.filename })
+  return { flow: parseGameFlow(sample.flow), source: english(sourceMessage.key, sourceMessage.values), sourceMessage }
 }
 
 export function downloadFlow(flow: GameFlow, filename = 'gameflow.json') {

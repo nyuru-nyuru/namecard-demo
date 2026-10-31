@@ -14,7 +14,8 @@ import {
   saveFlowchart,
   type FlowchartStorage,
 } from '../src/game/flowcharts.ts'
-import { emptyFlow } from '../src/game/gameflow.ts'
+import { emptyFlow, validateFlow } from '../src/game/gameflow.ts'
+import { createGame } from '../src/game/state.ts'
 
 function memoryStorage(): FlowchartStorage {
   const values = new Map<string, string>()
@@ -28,20 +29,48 @@ function memoryStorage(): FlowchartStorage {
 
 function playableFlow(name: string) {
   const flow = addCard(addPerson(emptyFlow(), name), 0)
-  return setStartingCard(updateCard(flow, 2, {
+  return setStartingCard(updateCard(flow, 0, {
     company: `${name}'s studio`, role: 'Designer', year: 2000,
-  }), 2, true)
+  }), 0, true)
 }
 
 test('new flowcharts have unique IDs, independent JSON, and their own entity ID sequences', () => {
   const flowcharts = Array.from({ length: 20 }, () => createFlowchart())
   assert.equal(new Set(flowcharts.map(({ id }) => id)).size, flowcharts.length)
   assert.ok(flowcharts.every(({ id, title, gameflow }) =>
-    id.length > 0 && title === 'Untitled flowchart' && gameflow.nextId === 0))
+    id.length > 0 && title === 'Untitled flowchart' && gameflow.nextId === 0 && gameflow.mode === 'all-unlocked'))
   assert.notEqual(flowcharts[0].gameflow, flowcharts[1].gameflow)
   flowcharts[0].gameflow = addPerson(flowcharts[0].gameflow, 'Ada')
   assert.equal(flowcharts[0].gameflow.nextId, 2)
-  assert.deepEqual(flowcharts[1].gameflow, emptyFlow())
+  assert.deepEqual(flowcharts[1].gameflow, { ...emptyFlow(), mode: 'all-unlocked' })
+})
+
+test('new editor flowcharts keep all cards unlocked through authoring, saving, and playback', async () => {
+  const storage = memoryStorage()
+  const flowchart = createFlowchart()
+  flowchart.gameflow = updateCard(addCard(addPerson(flowchart.gameflow, 'Ada'), 0), 0, {
+    company: 'Archive', role: 'Designer', year: 2000,
+  })
+  assert.deepEqual(flowchart.gameflow.startingCards, [])
+  assert.deepEqual(validateFlow(flowchart.gameflow), [])
+  saveFlowchart(flowchart, storage)
+  assert.equal(getFlowchart(flowchart.id, storage).gameflow.mode, 'all-unlocked')
+  const loaded = await loadGameFlow(flowchart.id, storage)
+  assert.equal(loaded.flow.mode, 'all-unlocked')
+  assert.deepEqual(createGame(loaded.flow).bin, [0])
+})
+
+test('creating a flowchart from existing data preserves explicit modes and legacy progression', () => {
+  const storage = memoryStorage()
+  for (const mode of [undefined, 'progression', 'all-unlocked'] as const) {
+    const flow = playableFlow('Ada')
+    if (mode !== undefined) flow.mode = mode
+    const flowchart = createFlowchart(flow)
+    assert.deepEqual(flowchart.gameflow, flow)
+    saveFlowchart(flowchart, storage)
+    assert.equal(getFlowchart(flowchart.id, storage).gameflow.mode, mode)
+    assert.deepEqual(getFlowchart(flowchart.id, storage).gameflow, flow)
+  }
 })
 
 test('each flowchart persists in its own ID-backed gameflow JSON and can be reopened', () => {
@@ -141,7 +170,7 @@ test('storage read and write failures are surfaced and do not destroy a previous
   assert.equal(storage.getItem(flowchartStorageKey(flowchart.id)), original)
 })
 
-test('playback loads the requested flowchart JSON rather than the public file or last-opened flowchart', async (context) => {
+test('playback loads saved JSON rather than Sheets, the public file, or the last-opened flowchart', async (context) => {
   const storage = memoryStorage()
   const first = createFlowchart(playableFlow('Ada'), 'Ada flow')
   const second = createFlowchart(playableFlow('Grace'), 'Grace flow')
@@ -152,7 +181,9 @@ test('playback loads the requested flowchart JSON rather than the public file or
     throw new Error('Playback must not request a public gameflow')
   })
 
-  const loaded = await loadGameFlow(first.id, storage)
+  const loaded = await loadGameFlow(first.id, storage, {
+    spreadsheetId: 'unused-sheet', range: 'Unused', apiKey: 'test-key',
+  })
   assert.deepEqual(loaded.flow, first.gameflow)
   assert.deepEqual(loaded.flowchart, { id: first.id, title: first.title })
   assert.match(loaded.source, new RegExp(first.id))
@@ -175,7 +206,7 @@ test('invalid, missing, and unreadable flowchart playback never falls back to an
 
   await assert.rejects(loadGameFlow('missing', storage), /not found/)
   await assert.rejects(loadGameFlow('', storage), /ID is required/)
-  await assert.rejects(loadGameFlow(invalid.id, storage), /needs a company, role, and display name/)
+  await assert.rejects(loadGameFlow(invalid.id, storage), /needs a company and display name/)
   storage.setItem(flowchartStorageKey(invalid.id), '{not json')
   await assert.rejects(loadGameFlow(invalid.id, storage), SyntaxError)
   assert.equal(fetch.mock.callCount(), 0)
